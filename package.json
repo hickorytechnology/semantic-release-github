@@ -1,0 +1,95 @@
+{
+  "name": "@hickory-technology/semantic-release-github",
+  "description": "semantic-release plugin to publish a GitHub release and comment on released Pull Requests/Issues",
+  "version": "0.0.0-development",
+  "author": "Josh Sullivan (https://twitter.com/jaysche_)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/semantic-release/github.git"
+  },
+  "bugs": {
+    "url": "https://github.com/semantic-release/github/issues"
+  },
+  "homepage": "https://github.com/semantic-release/github#readme",
+  "keywords": [
+    "git",
+    "github",
+    "issue",
+    "notifications",
+    "publish",
+    "pull-request",
+    "release",
+    "semantic-release",
+    "version"
+  ],
+  "contributors": [],
+  "main": "build/index.js",
+  "scripts": {
+    "build": "rimraf build && tsc",
+    "build:watch": "rimraf build && tsc --watch",
+    "lint": "eslint ./src --ext .ts,.tsx",
+    "lint:fix": "eslint ./src --ext .js,.jsx,.ts,.tsx --fix",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@octokit/openapi-types": "^7.3.2",
+    "@octokit/plugin-throttling": "^3.4.2",
+    "@octokit/rest": "^18.5.6",
+    "@semantic-release/error": "^2.2.0",
+    "@tsed/logger": "^5.15.0",
+    "aggregate-error": "^3.0.0",
+    "debug": "^4.1.0",
+    "dir-glob": "^3.0.0",
+    "fs-extra": "^10.0.0",
+    "globby": "^11.0.0",
+    "http-proxy-agent": "^4.0.0",
+    "https-proxy-agent": "^5.0.0",
+    "issue-parser": "^6.0.0",
+    "lodash": "^4.17.4",
+    "mime": "^2.4.3",
+    "p-filter": "^2.0.0",
+    "p-retry": "^4.0.0",
+    "roarr": "^7.0.0",
+    "source-map-support": "^0.5.19",
+    "uri-parse-lib": "^2.3.0",
+    "url-join": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.5",
+    "@types/dir-glob": "^2.0.0",
+    "@types/fs-extra": "^9.0.11",
+    "@types/jest": "^26.0.23",
+    "@types/lodash": "^4.14.170",
+    "@types/mime": "^2.0.3",
+    "@types/semantic-release": "^17.2.0",
+    "@types/url-join": "^4.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.26.0",
+    "@typescript-eslint/parser": "^4.26.0",
+    "ava": "3.15.0",
+    "clear-module": "4.1.1",
+    "codecov": "3.8.2",
+    "eslint": "^7.27.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-import-resolver-typescript": "^2.4.0",
+    "eslint-plugin-import": "^2.23.4",
+    "jest": "^27.0.6",
+    "nock": "13.0.9",
+    "nyc": "15.1.0",
+    "proxy": "1.0.2",
+    "proxyquire": "2.1.3",
+    "semantic-release": "17.4.3",
+    "server-destroy": "1.0.1",
+    "sinon": "9.2.4",
+    "tempy": "1.0.0",
+    "ts-jest": "^27.0.3",
+    "typescript": "^4.3.2",
+    "xo": "0.36.1"
+  },
+  "peerDependencies": {
+    "semantic-release": ">=16.0.0 <18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
