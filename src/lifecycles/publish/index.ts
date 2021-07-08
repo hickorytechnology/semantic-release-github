@@ -94,7 +94,7 @@ export async function publishGitHub(
       }
 
       let rawFileName: string = path.basename(filePath);
-      if (!Array.isArray(asset) && typeof asset !== 'string') {
+      if (!Array.isArray(asset) && typeof asset !== 'string' && asset.name != null) {
         rawFileName = asset.name;
       }
 

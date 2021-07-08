@@ -3,14 +3,14 @@ import path from 'path';
 import { castArray, uniqWith, uniq } from 'lodash';
 import dirGlob from 'dir-glob';
 import globby from 'globby';
-import { Asset } from '../types/asset';
+import { Asset, AssetConfigInput, GlobbedAsset } from '../types/asset';
 
-export async function globAssets({ cwd }: { cwd: any }, assets: Asset[]): Promise<Asset[]> {
+export async function globAssets({ cwd }: { cwd: any }, assets: AssetConfigInput[]): Promise<Asset[]> {
   if (typeof assets === 'string') {
     return [];
   }
 
-  const allGlobbed = assets.map(async (asset) => {
+  const allGlobbed = assets.map(async (asset): Promise<GlobbedAsset> => {
     let inferredPath: string | string[] = '';
     if (Array.isArray(asset) || typeof asset === 'string') {
       inferredPath = asset;
@@ -65,16 +65,18 @@ export async function globAssets({ cwd }: { cwd: any }, assets: Asset[]): Promis
     return glob;
   });
 
-  const toP = [...(await Promise.all(allGlobbed))];
-  const empty: any[] = [];
+  const empty: GlobbedAsset[] = [];
+  const resolved = [...(await Promise.all(allGlobbed))];
+  const globbedAssets = empty.concat(...resolved) as Asset[];
 
-  const merged = empty
-    .concat(toP)
-    // Sort with Object first, to prioritize Object definition over Strings in dedup
-    .sort((asset) => (typeof asset === 'string' ? 1 : -1));
+  // Sort with Object first, to prioritize Object definition over Strings in dedup
+  // eslint-disable-next-line no-confusing-arrow
+  const sortedAssets = globbedAssets.sort((asset) =>
+    !Array.isArray(asset) && typeof asset !== 'string' ? -1 : 1
+  );
 
   return uniqWith(
-    merged,
+    sortedAssets,
     // Compare `path` property if Object definition, value itself if String
     (a, b) =>
       path.resolve(cwd, typeof a === 'string' ? a : a.path) ===
