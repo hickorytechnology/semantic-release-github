@@ -118,3 +118,9 @@ export interface PluginOptions extends Options {
    */
   addReleases: false | 'bottom' | 'top';
 }
+
+/**
+ * Represents the different ways the plugin options can be set. Ultimately used to resolve the
+ * overall config into the {@link PluginOptions} type.
+ */
+export type PluginOptionInputs = { [K in keyof PluginOptions]: any };

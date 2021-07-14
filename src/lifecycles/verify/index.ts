@@ -2,6 +2,7 @@ import AggregateError from 'aggregate-error';
 import { isArray, isString } from 'lodash';
 import { Context } from 'semantic-release';
 import urlJoin from 'url-join';
+import { $log } from '@tsed/logger';
 import { PluginOptions } from '../../types/plugin-options';
 import { getClient } from '../../utils/get-client';
 import { getError } from '../../utils/get-error';
@@ -23,7 +24,7 @@ const VALIDATORS: Record<string, any> = {
 };
 
 export async function verifyGitHub(pluginOptions: PluginOptions, context: Context): Promise<void> {
-  const { env, options, logger } = context;
+  const { env, options } = context;
   const repositoryUrl = options === undefined ? '' : options.repositoryUrl;
   const { githubToken, githubUrl, githubApiPathPrefix, proxy } = resolveConfig(pluginOptions, context);
   const errors: any[] = [];
@@ -35,9 +36,9 @@ export async function verifyGitHub(pluginOptions: PluginOptions, context: Contex
   // );
 
   if (githubUrl) {
-    logger.log('Verify GitHub authentication (%s)', urlJoin(githubUrl, githubApiPathPrefix));
+    $log.debug('Verify GitHub authentication (%s)', urlJoin(githubUrl, githubApiPathPrefix));
   } else {
-    logger.log('Verify GitHub authentication');
+    $log.debug('Verify GitHub authentication');
   }
 
   const { repo, owner } = parseGitHubUrl(repositoryUrl);

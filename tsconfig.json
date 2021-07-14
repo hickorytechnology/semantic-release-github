@@ -1,10 +1,5 @@
 {
-  "exclude": [
-    "tmp",
-    "build",
-    "test",
-    "**/**.spec.*"
-  ],
+  "exclude": ["tmp", "build", "test", "**/**.spec.*"],
   "compilerOptions": {
     /* Enable incremental compilation */
     "incremental": false,
@@ -13,10 +8,7 @@
     /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 'es2020', or 'ESNext'. */
     "module": "commonjs",
     /* Specify library files to be included in the compilation. */
-    "lib": [
-      "DOM",
-      "esnext"
-    ],
+    "lib": ["DOM", "esnext"],
     /* Redirect output structure to the directory. */
     "outDir": "./build",
     /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */

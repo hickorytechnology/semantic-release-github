@@ -22,7 +22,6 @@ export async function publishGitHub(
     options: { repositoryUrl },
     branch,
     nextRelease: { name, gitTag, notes },
-    logger,
   } = context;
   const { githubToken, githubUrl, githubApiPathPrefix, proxy, assets } = resolveConfig(
     pluginOptions,
@@ -52,7 +51,7 @@ export async function publishGitHub(
       data: { html_url: url, id: releaseId },
     } = await github.repos.createRelease(release);
 
-    logger.log('Published GitHub release: %s', url);
+    $log.info('Published GitHub release: %s', url);
     return { url, name: RELEASE_NAME, id: releaseId };
   }
 
@@ -84,12 +83,12 @@ export async function publishGitHub(
       try {
         file = await stat(path.resolve(cwd, filePath));
       } catch {
-        logger.error('The asset %s cannot be read, and will be ignored.', filePath);
+        $log.error('The asset %s cannot be read, and will be ignored.', filePath);
         return;
       }
 
       if (!file || !file.isFile()) {
-        logger.error('The asset %s is not a file, and will be ignored.', filePath);
+        $log.error('The asset %s is not a file, and will be ignored.', filePath);
         return;
       }
 
@@ -106,7 +105,7 @@ export async function publishGitHub(
       const {
         data: { browser_download_url: downloadUrl },
       } = await github.repos.uploadReleaseAsset({
-        baseUrl: uploadUrl,
+        url: uploadUrl,
         repo,
         owner,
         release_id: releaseId,
@@ -121,7 +120,7 @@ export async function publishGitHub(
             ? template(asset.label)(context)
             : '',
       });
-      logger.log('Published file %s', downloadUrl);
+      $log.info('Published file %s', downloadUrl);
     })
   );
 
@@ -129,6 +128,6 @@ export async function publishGitHub(
     data: { html_url: url },
   } = await github.repos.updateRelease({ owner, repo, release_id: releaseId, draft: false });
 
-  logger.log('Published GitHub release: %s', url);
+  $log.info('Published GitHub release: %s', url);
   return { url, name: RELEASE_NAME, id: releaseId };
 }

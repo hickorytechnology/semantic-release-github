@@ -1,8 +1,8 @@
 import { castArray } from 'lodash';
 import { Context } from 'semantic-release';
-import { PluginOptions } from '../types/plugin-options';
+import { PluginOptionInputs, PluginOptions } from '../types/plugin-options';
 
-export function resolveConfig(config: Partial<PluginOptions>, context: Context): PluginOptions {
+export function resolveConfig(config: Partial<PluginOptionInputs>, context: Context): PluginOptions {
   const { env } = context;
   return {
     githubToken: env.GH_TOKEN || env.GITHUB_TOKEN,

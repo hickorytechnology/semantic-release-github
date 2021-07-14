@@ -6,6 +6,9 @@ import { publishGitHub } from './lifecycles/publish';
 import { successGitHub } from './lifecycles/success';
 import { verifyGitHub } from './lifecycles/verify';
 import { PluginOptions } from './types/plugin-options';
+import { loadEnv } from './utils/load-env';
+
+loadEnv();
 
 let verified: boolean;
 
