@@ -2,6 +2,7 @@ import { $log } from '@tsed/logger';
 import { cleanAll } from 'nock';
 import { Context, GlobalConfig, NextRelease } from 'semantic-release';
 import { escape } from 'querystring';
+import { repeat } from 'lodash';
 import { successGitHub } from '../../../src/lifecycles/success';
 import { resolveConfig } from '../../../src/utils/resolve-config';
 import { authenticate } from '../../helpers/mock-github';
@@ -50,8 +51,13 @@ test('Add comment and labels to PRs associated with release commits and issues s
     releases,
     logger: { log: jest.fn(), error: jest.fn() },
   };
+
   const pluginConfig = resolveConfig(
-    { successComment: { enabled: true, comment: '' }, failComment: { enabled: true, failTitle } },
+    {
+      successComment: { enabled: true, comment: '' },
+      failComment: { enabled: true, failTitle },
+      releasedLabels: { enabled: true },
+    },
     context
   );
 
@@ -120,247 +126,312 @@ test('Add comment and labels to PRs associated with release commits and issues s
   expect(github.isDone()).toBe(true);
 });
 
-// test('Add comment and labels to PRs associated with release commits and issues closed by PR/commits comments with custom URL', async () => {
-//   const owner = 'test_user';
-//   const repo = 'test_repo';
-//   const env = { GH_URL: 'https://custom-url.com', GH_TOKEN: 'github_token', GH_PREFIX: 'prefix' };
-//   const failTitle = 'The automated release is failing 🚨';
-//   const pluginConfig = { failTitle };
-//   const prs = [
-//     { number: 1, pull_request: {}, state: 'closed' },
-//     { number: 2, pull_request: {}, body: 'Fixes #3', state: 'closed' },
-//   ];
-//   const options = { branch: 'master', repositoryUrl: `https://custom-url.com/${owner}/${repo}.git` };
-//   const commits = [
-//     { hash: '123', message: 'Commit 1 message\n\n Fix #1' },
-//     { hash: '456', message: 'Commit 2 message' },
-//     { hash: '789', message: `Commit 3 message Closes https://custom-url.com/${owner}/${repo}/issues/4` },
-//   ];
-//   const nextRelease = { version: '1.0.0', channel: 'next' };
-//   const releases = [{ name: 'GitHub release', url: 'https://custom-url.com/release' }];
-//   const github = authenticate(env)
-//     .get(`/repos/${owner}/${repo}`)
-//     .reply(200, { full_name: `${owner}/${repo}` })
-//     .get(
-//       `/search/issues?q=${escape(`repo:${owner}/${repo}`)}+${escape('type:pr')}+${escape(
-//         'is:merged'
-//       )}+${commits.map((commit) => commit.hash).join('+')}`
-//     )
-//     .reply(200, { items: prs })
-//     .get(`/repos/${owner}/${repo}/pulls/1/commits`)
-//     .reply(200, [{ sha: commits[0].hash }])
-//     .get(`/repos/${owner}/${repo}/pulls/2/commits`)
-//     .reply(200, [{ sha: commits[1].hash }])
-//     .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://custom-url.com/successcomment-1' })
-//     .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released on @next"]')
-//     .reply(200, {})
-//     .post(`/repos/${owner}/${repo}/issues/2/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://custom-url.com/successcomment-2' })
-//     .post(`/repos/${owner}/${repo}/issues/2/labels`, '["released on @next"]')
-//     .reply(200, {})
-//     .post(`/repos/${owner}/${repo}/issues/3/comments`, { body: /This issue has been resolved/ })
-//     .reply(200, { html_url: 'https://custom-url.com/successcomment-3' })
-//     .post(`/repos/${owner}/${repo}/issues/3/labels`, '["released on @next"]')
-//     .reply(200, {})
-//     .post(`/repos/${owner}/${repo}/issues/4/comments`, { body: /This issue has been resolved/ })
-//     .reply(200, { html_url: 'https://custom-url.com/successcomment-4' })
-//     .post(`/repos/${owner}/${repo}/issues/4/labels`, '["released on @next"]')
-//     .reply(200, {})
-//     .get(
-//       `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-//         'type:issue'
-//       )}+${escape('state:open')}+${escape(failTitle)}`
-//     )
-//     .reply(200, { items: [] });
+test('Add comment and labels to PRs associated with release commits and issues closed by PR/commits comments with custom URL', async () => {
+  const owner = 'test_user';
+  const repo = 'test_repo';
+  const env = { GH_URL: 'https://custom-url.com', GH_TOKEN: 'github_token', GH_PREFIX: 'prefix' };
+  const failTitle = 'The automated release is failing 🚨';
+  const prs = [
+    { number: 1, pull_request: {}, state: 'closed' },
+    { number: 2, pull_request: {}, body: 'Fixes #3', state: 'closed' },
+  ];
+  const options = { branch: 'master', repositoryUrl: `https://custom-url.com/${owner}/${repo}.git` };
+  const commits = [
+    { hash: '123', message: 'Commit 1 message\n\n Fix #1' },
+    { hash: '456', message: 'Commit 2 message' },
+    { hash: '789', message: `Commit 3 message Closes https://custom-url.com/${owner}/${repo}/issues/4` },
+  ];
+  const nextRelease = { version: '1.0.0', channel: 'next' } as NextRelease | any;
+  const releases = [{ name: 'GitHub release', url: 'https://custom-url.com/release' }];
 
-//   await success(pluginConfig, { env, options, commits, nextRelease, releases, logger: t.context.logger });
+  const context: Context | any = {
+    env,
+    options,
+    commits,
+    nextRelease,
+    releases,
+    logger: { log: jest.fn(), error: jest.fn() },
+  };
 
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 1, 'https://custom-url.com/successcomment-1')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released on @next'], 1));
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 2, 'https://custom-url.com/successcomment-2')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released on @next'], 2));
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 3, 'https://custom-url.com/successcomment-3')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released on @next'], 3));
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 4, 'https://custom-url.com/successcomment-4')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released on @next'], 4));
-//   t.true(github.isDone());
-// });
+  const pluginConfig = resolveConfig(
+    {
+      successComment: { enabled: true, comment: '' },
+      failComment: { enabled: true, failTitle },
+      releasedLabels: { enabled: true },
+    },
+    context
+  );
 
-// test('Make multiple search queries if necessary', async () => {
-//   const owner = 'test_user';
-//   const repo = 'test_repo';
-//   const env = { GITHUB_TOKEN: 'github_token' };
-//   const failTitle = 'The automated release is failing 🚨';
-//   const pluginConfig = { failTitle };
-//   const prs = [
-//     { number: 1, pull_request: {}, state: 'closed' },
-//     { number: 2, pull_request: {}, state: 'closed' },
-//     { number: 3, pull_request: {}, state: 'closed' },
-//     { number: 4, pull_request: {}, state: 'closed' },
-//     { number: 5, pull_request: {}, state: 'closed' },
-//     { number: 6, pull_request: {}, state: 'closed' },
-//   ];
-//   const options = { branch: 'master', repositoryUrl: `https://github.com/${owner}/${repo}.git` };
-//   const commits = [
-//     { hash: repeat('a', 40), message: 'Commit 1 message' },
-//     { hash: repeat('b', 40), message: 'Commit 2 message' },
-//     { hash: repeat('c', 40), message: 'Commit 3 message' },
-//     { hash: repeat('d', 40), message: 'Commit 4 message' },
-//     { hash: repeat('e', 40), message: 'Commit 5 message' },
-//     { hash: repeat('f', 40), message: 'Commit 6 message' },
-//     { hash: repeat('g', 40), message: 'Commit 7 message' },
-//   ];
-//   const nextRelease = { version: '1.0.0' };
-//   const releases = [{ name: 'GitHub release', url: 'https://github.com/release' }];
-//   const github = authenticate(env)
-//     .get(`/repos/${owner}/${repo}`)
-//     .reply(200, { full_name: `${owner}/${repo}` })
-//     .get(
-//       `/search/issues?q=${escape(`repo:${owner}/${repo}`)}+${escape('type:pr')}+${escape('is:merged')}+${
-//         commits[0].hash
-//       }+${commits[1].hash}+${commits[2].hash}+${commits[3].hash}+${commits[4].hash}`
-//     )
-//     .reply(200, { items: [prs[0], prs[1], prs[2], prs[3], prs[4]] })
-//     .get(
-//       `/search/issues?q=${escape(`repo:${owner}/${repo}`)}+${escape('type:pr')}+${escape('is:merged')}+${
-//         commits[5].hash
-//       }+${commits[6].hash}`
-//     )
-//     .reply(200, { items: [prs[5], prs[1]] })
-//     .get(`/repos/${owner}/${repo}/pulls/1/commits`)
-//     .reply(200, [{ sha: commits[0].hash }])
-//     .get(`/repos/${owner}/${repo}/pulls/2/commits`)
-//     .reply(200, [{ sha: commits[1].hash }])
-//     .get(`/repos/${owner}/${repo}/pulls/3/commits`)
-//     .reply(200, [{ sha: commits[2].hash }])
-//     .get(`/repos/${owner}/${repo}/pulls/4/commits`)
-//     .reply(200, [{ sha: commits[3].hash }])
-//     .get(`/repos/${owner}/${repo}/pulls/5/commits`)
-//     .reply(200, [{ sha: commits[4].hash }])
-//     .get(`/repos/${owner}/${repo}/pulls/6/commits`)
-//     .reply(200, [{ sha: commits[5].hash }])
-//     .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://github.com/successcomment-1' })
-//     .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released"]')
-//     .reply(200, {})
-//     .post(`/repos/${owner}/${repo}/issues/2/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://github.com/successcomment-2' })
-//     .post(`/repos/${owner}/${repo}/issues/2/labels`, '["released"]')
-//     .reply(200, {})
-//     .post(`/repos/${owner}/${repo}/issues/3/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://github.com/successcomment-3' })
-//     .post(`/repos/${owner}/${repo}/issues/3/labels`, '["released"]')
-//     .reply(200, {})
-//     .post(`/repos/${owner}/${repo}/issues/4/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://github.com/successcomment-4' })
-//     .post(`/repos/${owner}/${repo}/issues/4/labels`, '["released"]')
-//     .reply(200, {})
-//     .post(`/repos/${owner}/${repo}/issues/5/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://github.com/successcomment-5' })
-//     .post(`/repos/${owner}/${repo}/issues/5/labels`, '["released"]')
-//     .reply(200, {})
-//     .post(`/repos/${owner}/${repo}/issues/6/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://github.com/successcomment-6' })
-//     .post(`/repos/${owner}/${repo}/issues/6/labels`, '["released"]')
-//     .reply(200, {})
-//     .get(
-//       `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-//         'type:issue'
-//       )}+${escape('state:open')}+${escape(failTitle)}`
-//     )
-//     .reply(200, { items: [] });
+  const github = authenticate(env)
+    .get(`/repos/${owner}/${repo}`)
+    .reply(200, { full_name: `${owner}/${repo}` })
 
-//   await success(pluginConfig, { env, options, commits, nextRelease, releases, logger: t.context.logger });
+    .get(
+      `/search/issues?q=${escape(`repo:${owner}/${repo}`)}+${escape('type:pr')}+${escape('is:merged')}+${commits
+        .map((commit) => commit.hash)
+        .join('+')}`
+    )
+    .reply(200, { items: prs })
 
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released'], 1));
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 2, 'https://github.com/successcomment-2')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released'], 2));
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 3, 'https://github.com/successcomment-3')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released'], 3));
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 4, 'https://github.com/successcomment-4')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released'], 4));
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 5, 'https://github.com/successcomment-5')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released'], 5));
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 6, 'https://github.com/successcomment-6')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released'], 6));
-//   t.true(github.isDone());
-// });
+    .get(`/repos/${owner}/${repo}/pulls/1/commits`)
+    .reply(200, [{ sha: commits[0].hash }])
 
-// test('Do not add comment and labels for unrelated PR returned by search (compare sha and merge_commit_sha)', async () => {
-//   const owner = 'test_user';
-//   const repo = 'test_repo';
-//   const env = { GITHUB_TOKEN: 'github_token' };
-//   const failTitle = 'The automated release is failing 🚨';
-//   const pluginConfig = { failTitle };
-//   const prs = [
-//     { number: 1, pull_request: {}, state: 'closed' },
-//     { number: 2, pull_request: {}, state: 'closed' },
-//   ];
-//   const options = { branch: 'master', repositoryUrl: `https://github.com/${owner}/${repo}.git` };
-//   const commits = [
-//     { hash: '123', message: 'Commit 1 message' },
-//     { hash: '456', message: 'Commit 2 message' },
-//   ];
-//   const nextRelease = { version: '1.0.0' };
-//   const releases = [{ name: 'GitHub release', url: 'https://github.com/release' }];
-//   const github = authenticate(env)
-//     .get(`/repos/${owner}/${repo}`)
-//     .reply(200, { full_name: `${owner}/${repo}` })
-//     .get(
-//       `/search/issues?q=${escape(`repo:${owner}/${repo}`)}+${escape('type:pr')}+${escape(
-//         'is:merged'
-//       )}+${commits.map((commit) => commit.hash).join('+')}`
-//     )
-//     .reply(200, { items: prs })
-//     .get(`/repos/${owner}/${repo}/pulls/1/commits`)
-//     .reply(200, [{ sha: 'rebased_sha' }])
-//     .get(`/repos/${owner}/${repo}/pulls/1`)
-//     .reply(200, { merge_commit_sha: commits[0].hash })
-//     .get(`/repos/${owner}/${repo}/pulls/2/commits`)
-//     .reply(200, [{ sha: 'rebased_sha' }])
-//     .get(`/repos/${owner}/${repo}/pulls/2`)
-//     .reply(200, { merge_commit_sha: 'unrelated_sha' })
-//     .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
-//     .reply(200, { html_url: 'https://github.com/successcomment-1' })
-//     .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released"]')
-//     .reply(200, {})
-//     .get(
-//       `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-//         'type:issue'
-//       )}+${escape('state:open')}+${escape(failTitle)}`
-//     )
-//     .reply(200, { items: [] });
+    .get(`/repos/${owner}/${repo}/pulls/2/commits`)
+    .reply(200, [{ sha: commits[1].hash }])
 
-//   await success(pluginConfig, { env, options, commits, nextRelease, releases, logger: t.context.logger });
+    .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://custom-url.com/successcomment-1' })
 
-//   t.true(
-//     t.context.log.calledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1')
-//   );
-//   t.true(t.context.log.calledWith('Added labels %O to issue #%d', ['released'], 1));
-//   t.true(github.isDone());
-// });
+    .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released on @next"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/2/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://custom-url.com/successcomment-2' })
+
+    .post(`/repos/${owner}/${repo}/issues/2/labels`, '["released on @next"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/3/comments`, { body: /This issue has been resolved/ })
+    .reply(200, { html_url: 'https://custom-url.com/successcomment-3' })
+
+    .post(`/repos/${owner}/${repo}/issues/3/labels`, '["released on @next"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/4/comments`, { body: /This issue has been resolved/ })
+    .reply(200, { html_url: 'https://custom-url.com/successcomment-4' })
+
+    .post(`/repos/${owner}/${repo}/issues/4/labels`, '["released on @next"]')
+    .reply(200, {})
+
+    .get(
+      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape('type:issue')}+${escape(
+        'state:open'
+      )}+${escape(failTitle)}`
+    )
+    .reply(200, { items: [] });
+
+  await successGitHub(pluginConfig, context);
+
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://custom-url.com/successcomment-1');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released on @next'], 1);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 2, 'https://custom-url.com/successcomment-2');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released on @next'], 2);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 3, 'https://custom-url.com/successcomment-3');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released on @next'], 3);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 4, 'https://custom-url.com/successcomment-4');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released on @next'], 4);
+  expect(github.isDone()).toBe(true);
+});
+
+test('Make multiple search queries if necessary', async () => {
+  const owner = 'test_user';
+  const repo = 'test_repo';
+  const env = { GITHUB_TOKEN: 'github_token' };
+  const failTitle = 'The automated release is failing 🚨';
+  const prs = [
+    { number: 1, pull_request: {}, state: 'closed' },
+    { number: 2, pull_request: {}, state: 'closed' },
+    { number: 3, pull_request: {}, state: 'closed' },
+    { number: 4, pull_request: {}, state: 'closed' },
+    { number: 5, pull_request: {}, state: 'closed' },
+    { number: 6, pull_request: {}, state: 'closed' },
+  ];
+  const options = { branch: 'master', repositoryUrl: `https://github.com/${owner}/${repo}.git` };
+  const commits = [
+    { hash: repeat('a', 40), message: 'Commit 1 message' },
+    { hash: repeat('b', 40), message: 'Commit 2 message' },
+    { hash: repeat('c', 40), message: 'Commit 3 message' },
+    { hash: repeat('d', 40), message: 'Commit 4 message' },
+    { hash: repeat('e', 40), message: 'Commit 5 message' },
+    { hash: repeat('f', 40), message: 'Commit 6 message' },
+    { hash: repeat('g', 40), message: 'Commit 7 message' },
+  ];
+  const nextRelease = { version: '1.0.0' } as NextRelease;
+  const releases = [{ name: 'GitHub release', url: 'https://github.com/release' }];
+
+  const context: Context | any = {
+    env,
+    options,
+    commits,
+    nextRelease,
+    releases,
+    logger: { log: jest.fn(), error: jest.fn() },
+  };
+
+  const pluginConfig = resolveConfig(
+    {
+      successComment: { enabled: true, comment: '' },
+      failComment: { enabled: true, failTitle },
+      releasedLabels: { enabled: true },
+    },
+    context
+  );
+
+  const github = authenticate(env)
+    .get(`/repos/${owner}/${repo}`)
+    .reply(200, { full_name: `${owner}/${repo}` })
+
+    .get(
+      `/search/issues?q=${escape(`repo:${owner}/${repo}`)}+${escape('type:pr')}+${escape('is:merged')}+${
+        commits[0].hash
+      }+${commits[1].hash}+${commits[2].hash}+${commits[3].hash}+${commits[4].hash}`
+    )
+    .reply(200, { items: [prs[0], prs[1], prs[2], prs[3], prs[4]] })
+
+    .get(
+      `/search/issues?q=${escape(`repo:${owner}/${repo}`)}+${escape('type:pr')}+${escape('is:merged')}+${
+        commits[5].hash
+      }+${commits[6].hash}`
+    )
+    .reply(200, { items: [prs[5], prs[1]] })
+
+    .get(`/repos/${owner}/${repo}/pulls/1/commits`)
+    .reply(200, [{ sha: commits[0].hash }])
+
+    .get(`/repos/${owner}/${repo}/pulls/2/commits`)
+    .reply(200, [{ sha: commits[1].hash }])
+
+    .get(`/repos/${owner}/${repo}/pulls/3/commits`)
+    .reply(200, [{ sha: commits[2].hash }])
+
+    .get(`/repos/${owner}/${repo}/pulls/4/commits`)
+    .reply(200, [{ sha: commits[3].hash }])
+
+    .get(`/repos/${owner}/${repo}/pulls/5/commits`)
+    .reply(200, [{ sha: commits[4].hash }])
+
+    .get(`/repos/${owner}/${repo}/pulls/6/commits`)
+    .reply(200, [{ sha: commits[5].hash }])
+
+    .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://github.com/successcomment-1' })
+
+    .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/2/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://github.com/successcomment-2' })
+
+    .post(`/repos/${owner}/${repo}/issues/2/labels`, '["released"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/3/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://github.com/successcomment-3' })
+
+    .post(`/repos/${owner}/${repo}/issues/3/labels`, '["released"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/4/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://github.com/successcomment-4' })
+
+    .post(`/repos/${owner}/${repo}/issues/4/labels`, '["released"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/5/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://github.com/successcomment-5' })
+
+    .post(`/repos/${owner}/${repo}/issues/5/labels`, '["released"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/6/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://github.com/successcomment-6' })
+
+    .post(`/repos/${owner}/${repo}/issues/6/labels`, '["released"]')
+    .reply(200, {})
+
+    .get(
+      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape('type:issue')}+${escape(
+        'state:open'
+      )}+${escape(failTitle)}`
+    )
+    .reply(200, { items: [] });
+
+  await successGitHub(pluginConfig, context);
+
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 2, 'https://github.com/successcomment-2');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 2);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 3, 'https://github.com/successcomment-3');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 3);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 4, 'https://github.com/successcomment-4');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 4);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 5, 'https://github.com/successcomment-5');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 5);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 6, 'https://github.com/successcomment-6');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 6);
+  expect(github.isDone()).toBe(true);
+});
+
+test('Do not add comment and labels for unrelated PR returned by search (compare sha and merge_commit_sha)', async () => {
+  const owner = 'test_user';
+  const repo = 'test_repo';
+  const env = { GITHUB_TOKEN: 'github_token' };
+  const failTitle = 'The automated release is failing 🚨';
+  const prs = [
+    { number: 1, pull_request: {}, state: 'closed' },
+    { number: 2, pull_request: {}, state: 'closed' },
+  ];
+  const options = { branch: 'master', repositoryUrl: `https://github.com/${owner}/${repo}.git` };
+  const commits = [
+    { hash: '123', message: 'Commit 1 message' },
+    { hash: '456', message: 'Commit 2 message' },
+  ];
+  const nextRelease = { version: '1.0.0' } as NextRelease;
+  const releases = [{ name: 'GitHub release', url: 'https://github.com/release' }];
+
+  const context: Context | any = {
+    env,
+    options,
+    commits,
+    nextRelease,
+    releases,
+    logger: { log: jest.fn(), error: jest.fn() },
+  };
+
+  const pluginConfig = resolveConfig(
+    {
+      successComment: { enabled: true, comment: '' },
+      failComment: { enabled: true, failTitle },
+      releasedLabels: { enabled: true },
+    },
+    context
+  );
+
+  const github = authenticate(env)
+    .get(`/repos/${owner}/${repo}`)
+    .reply(200, { full_name: `${owner}/${repo}` })
+    .get(
+      `/search/issues?q=${escape(`repo:${owner}/${repo}`)}+${escape('type:pr')}+${escape('is:merged')}+${commits
+        .map((commit) => commit.hash)
+        .join('+')}`
+    )
+    .reply(200, { items: prs })
+    .get(`/repos/${owner}/${repo}/pulls/1/commits`)
+    .reply(200, [{ sha: 'rebased_sha' }])
+    .get(`/repos/${owner}/${repo}/pulls/1`)
+    .reply(200, { merge_commit_sha: commits[0].hash })
+    .get(`/repos/${owner}/${repo}/pulls/2/commits`)
+    .reply(200, [{ sha: 'rebased_sha' }])
+    .get(`/repos/${owner}/${repo}/pulls/2`)
+    .reply(200, { merge_commit_sha: 'unrelated_sha' })
+    .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
+    .reply(200, { html_url: 'https://github.com/successcomment-1' })
+    .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released"]')
+    .reply(200, {})
+    .get(
+      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape('type:issue')}+${escape(
+        'state:open'
+      )}+${escape(failTitle)}`
+    )
+    .reply(200, { items: [] });
+
+  await successGitHub(pluginConfig, context);
+
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
+  expect(github.isDone()).toBe(true);
+});
 
 // test('Do not add comment and labels if no PR is associated with release commits', async () => {
 //   const owner = 'test_user';

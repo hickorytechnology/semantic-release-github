@@ -75,6 +75,7 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
     const x = await github.search.issuesAndPullRequests({ q: query });
     return x.data.items;
   });
+
   const dedupedQueries = uniqBy(flatten(await Promise.all(searchQueries)), (q) => q.number);
 
   const filterer = async (query: components['schemas']['issue-search-result-item']) => {

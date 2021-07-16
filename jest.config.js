@@ -172,7 +172,7 @@ module.exports = {
   // timers: "real",
 
   // Default timeout of a test in ms
-  testTimeout: 10000,
+  testTimeout: 100000,
 
   // A map from regular expressions to paths to transformers
   // transform: undefined,
