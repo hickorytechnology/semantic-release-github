@@ -53,10 +53,10 @@ export interface PluginOptions extends Options {
      * Whether or not the {@link successComment} should be applied to issues
      * and pull requests.
      */
-    // eslint-disable-next-line max-len
     enabled:
       | boolean
       | ((name: string, type: string, channel: string, range: string, prerelease: boolean) => boolean);
+
     comment: string;
   };
 
@@ -68,7 +68,6 @@ export interface PluginOptions extends Options {
      * Whether or not the {@link failComment} should be applied to issues
      * when a release fails.
      */
-    // eslint-disable-next-line max-len
     enabled:
       | boolean
       | ((name: string, type: string, channel: string, range: string, prerelease: boolean) => boolean);

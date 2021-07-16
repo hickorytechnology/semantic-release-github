@@ -1,10 +1,4 @@
-import { RestEndpointMethodTypes } from '@octokit/rest';
-
-export function getSearchQueries(
-  base: string,
-  commits: any[],
-  separator = '+'
-): RestEndpointMethodTypes['search']['issuesAndPullRequests']['parameters'][] {
+export function getSearchQueries(base: string, commits: any[], separator = '+'): string[] {
   return commits.reduce((searches, commit) => {
     const updatedSearches = [...searches];
     const lastSearch = updatedSearches[updatedSearches.length - 1];

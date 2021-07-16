@@ -14,7 +14,10 @@ export function resolveConfig(config: Partial<PluginOptionInputs>, context: Cont
     },
     assets: config.assets ? castArray(config.assets) : [],
     assignees: config.assignees ? castArray(config.assignees) : [],
-    successComment: config.successComment ?? { enabled: false, comment: '' },
+    successComment: {
+      enabled: config.successComment?.enabled ?? false,
+      comment: config.successComment?.comment ?? '',
+    },
     failComment: {
       enabled: config.failComment?.enabled ?? false,
       failTitle:

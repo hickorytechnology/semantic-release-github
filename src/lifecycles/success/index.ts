@@ -33,7 +33,6 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
     commits,
     nextRelease,
     releases,
-    logger,
   }: SuccessContext = context;
   const {
     githubToken,
@@ -42,13 +41,12 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
     proxy,
     successComment,
     failComment,
-    failTitle,
     releasedLabels,
     addReleases,
   } = resolveConfig(pluginOptions, context);
 
   if (!successComment.enabled) {
-    logger.log('Skip commenting on issues and pull requests.');
+    $log.info('Skip commenting on issues and pull requests.');
     return;
   }
 
@@ -73,9 +71,10 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
   const releaseInfos = releases.filter((release) => Boolean(release.name));
   const shas = commits.map(({ hash }) => hash);
 
-  const searchQueries = getSearchQueries(`repo:${owner}/${repo}+type:pr+is:merged`, shas).map(
-    async (query) => (await github.search.issuesAndPullRequests({ q: query.q })).data.items
-  );
+  const searchQueries = getSearchQueries(`repo:${owner}/${repo}+type:pr+is:merged`, shas).map(async (query) => {
+    const x = await github.search.issuesAndPullRequests({ q: query });
+    return x.data.items;
+  });
   const dedupedQueries = uniqBy(flatten(await Promise.all(searchQueries)), (q) => q.number);
 
   const filterer = async (query: components['schemas']['issue-search-result-item']) => {
@@ -103,10 +102,8 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
   );
 
   // Parse the release commits message and PRs body to find resolved issues/PRs via comment keywords
-  const issuesAndPrs: Partial<components['schemas']['issue-search-result-item']>[] = [
-    ...prs.map((pr) => pr.body),
-    ...commits.map((commit) => commit.message),
-  ].reduce((issues: any[], message: string) => {
+  const issuesAndPrs = [...prs.map((pr) => pr.body), ...commits.map((commit) => commit.message)];
+  const issueNumbers = issuesAndPrs.reduce((issues: any[], message: string | undefined) => {
     if (message) {
       const parsed: {
         actions: Record<string, any>;
@@ -128,7 +125,7 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
 
   // add success comments and assign release labels
   await Promise.all(
-    uniqBy([...prs, ...issuesAndPrs], (q) => q.number).map(async (issue) => {
+    uniqBy([...prs, ...issueNumbers], (q) => q.number).map(async (issue) => {
       if (issue.number == null) {
         return;
       }
@@ -149,7 +146,7 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
         const {
           data: { html_url: url },
         } = await github.issues.createComment(comment);
-        logger.log('Added comment to issue #%d: %s', issue.number, url);
+        $log.info('Added comment to issue #%d: %s', issue.number, url);
 
         if (releasedLabels.enabled && releasedLabels.labels.length > 0) {
           const labels = releasedLabels.labels.map((label) => template(label)(context));
@@ -161,26 +158,26 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
             number: issue.number,
             data: labels,
           });
-          logger.log('Added labels %O to issue #%d', labels, issue.number);
+          $log.info('Added labels %O to issue #%d', labels, issue.number);
         }
       } catch (error) {
         if (error.status === 403) {
-          logger.error('Not allowed to add a comment to the issue #%d.', issue.number);
+          $log.error('Not allowed to add a comment to the issue #%d.', issue.number);
         } else if (error.status === 404) {
-          logger.error("Failed to add a comment to the issue #%d as it doesn't exist.", issue.number);
+          $log.error("Failed to add a comment to the issue #%d as it doesn't exist.", issue.number);
         } else {
           errors.push(error);
-          logger.error('Failed to add a comment to the issue #%d.', issue.number);
+          $log.error('Failed to add a comment to the issue #%d.', issue.number);
           // Don't throw right away and continue to update other issues
         }
       }
     })
   );
 
-  if (failComment.enabled === false || failTitle === false) {
-    logger.log('Skip closing issue.');
+  if (failComment.enabled === false || failComment.failTitle === undefined) {
+    $log.info('Skip closing issue.');
   } else {
-    const srIssues = await findSRIssues(github, failTitle, owner, repo);
+    const srIssues = await findSRIssues(github, failComment.failTitle, owner, repo);
 
     $log.debug('found semantic-release issues: %O', srIssues);
 
@@ -205,10 +202,10 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
             issue_number: updatedIssue.issue_number,
           });
 
-          logger.log('Closed issue #%d: %s.', issue.number, url);
+          $log.info('Closed issue #%d: %s.', issue.number, url);
         } catch (error) {
           errors.push(error);
-          logger.error('Failed to close the issue #%d.', issue.number);
+          $log.error('Failed to close the issue #%d.', issue.number);
           // Don't throw right away and continue to close other issues
         }
       })
