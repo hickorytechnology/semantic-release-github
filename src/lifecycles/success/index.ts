@@ -175,7 +175,7 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
     })
   );
 
-  if (failComment.enabled === false || failComment.failTitle === undefined) {
+  if (failComment.enabled === false) {
     $log.info('Skip closing issue.');
   } else {
     const srIssues = await findSRIssues(github, failComment.failTitle, owner, repo);
@@ -218,7 +218,7 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
     if (ghRelease != null) {
       const ghRelaseId = ghRelease.id;
       const additionalReleases = getReleaseLinks(releases);
-      if (!isEmpty(additionalReleases) && !ghRelaseId != null) {
+      if (!isEmpty(additionalReleases) && ghRelaseId != null) {
         const newBody =
           addReleases === 'top'
             ? additionalReleases.concat('\n---\n', nextRelease.notes)

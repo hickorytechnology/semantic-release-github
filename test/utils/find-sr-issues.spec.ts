@@ -30,9 +30,9 @@ test('Filter out issues without ID', async () => {
   ];
   const github = authenticate({}, { githubToken })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(title)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(title)}`
     )
     .reply(200, { items: issues });
 
@@ -52,9 +52,9 @@ test('Return empty array if not issues found', async () => {
   const issues: any[] = [];
   const github = authenticate({}, { githubToken })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(title)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(title)}`
     )
     .reply(200, { items: issues });
 
@@ -74,9 +74,9 @@ test('Return empty array if not issues has matching ID', async () => {
   ];
   const github = authenticate({}, { githubToken })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(title)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(title)}`
     )
     .reply(200, { items: issues });
 
@@ -92,9 +92,9 @@ test.skip('Retries 4 times', async () => {
   const title = 'The automated release is failing :rotating_light:';
   const github = authenticate({}, { githubToken })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(title)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(title)}`
     )
     .times(4)
     .reply(422);
@@ -111,9 +111,9 @@ test.skip('Do not retry on 401 error', async () => {
   const title = 'The automated release is failing :rotating_light:';
   const github = authenticate({}, { githubToken })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(title)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(title)}`
     )
     .reply(401);
 

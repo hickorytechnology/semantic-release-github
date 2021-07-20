@@ -264,7 +264,7 @@ test('Publish a release with one asset', async () => {
     uploadUrl: 'https://github.com',
     contentLength: (await stat(path.resolve(cwd, '.dotfile'))).size,
   })
-    .post(`${uploadUri}?name=${escape('.dotfile')}&label=${escape('A dotfile with no ext')}`)
+    .post(`${uploadUri}?name=${encodeURIComponent('.dotfile')}&label=${encodeURIComponent('A dotfile with no ext')}`)
     .reply(200, { browser_download_url: assetUrl });
 
   const result = await publishGitHub(pluginConfig, context);
@@ -326,7 +326,7 @@ test('Publish a release with one asset and custom github url', async () => {
     uploadUrl: env.GH_URL,
     contentLength: (await stat(path.resolve(cwd, 'upload.txt'))).size,
   })
-    .post(`${uploadUri}?name=${escape('upload.txt')}&label=${escape('A text file')}`)
+    .post(`${uploadUri}?name=${encodeURIComponent('upload.txt')}&label=${encodeURIComponent('A text file')}`)
     .reply(200, { browser_download_url: assetUrl });
 
   const result = await publishGitHub(pluginConfig, context);

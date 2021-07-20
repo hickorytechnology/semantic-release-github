@@ -38,9 +38,9 @@ test('Open a new issue with the list of errors', async () => {
     .reply(200, { full_name: `${redirectedOwner}/${redirectedRepo}` })
 
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${redirectedOwner}/${redirectedRepo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(failTitle)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${redirectedOwner}/${redirectedRepo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
     )
     .reply(200, { items: [] })
 
@@ -75,17 +75,17 @@ test.skip('Open a new issue with the list of errors, retrying 4 times', async ()
     .reply(200, { full_name: `${owner}/${repo}` })
 
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(failTitle)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
     )
     .times(3)
     .reply(404)
 
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(failTitle)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
     )
     .reply(200, { items: [] })
 
@@ -134,9 +134,9 @@ test('Open a new issue with the list of errors and custom title and comment', as
     .get(`/repos/${owner}/${repo}`)
     .reply(200, { full_name: `${owner}/${repo}` })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(failTitle)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
     )
     .reply(200, { items: [] })
     .post(`/repos/${owner}/${repo}/issues`, {
@@ -168,9 +168,9 @@ test('Open a new issue with assignees and the list of errors', async () => {
     .get(`/repos/${owner}/${repo}`)
     .reply(200, { full_name: `${owner}/${repo}` })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(failTitle)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
     )
     .reply(200, { items: [] })
     .post(`/repos/${owner}/${repo}/issues`, {
@@ -205,9 +205,9 @@ test('Open a new issue without labels and the list of errors', async () => {
     .get(`/repos/${owner}/${repo}`)
     .reply(200, { full_name: `${owner}/${repo}` })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(failTitle)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
     )
     .reply(200, { items: [] })
     .post(`/repos/${owner}/${repo}/issues`, {
@@ -244,9 +244,9 @@ test('Update the first existing issue with the list of errors', async () => {
     .get(`/repos/${owner}/${repo}`)
     .reply(200, { full_name: `${owner}/${repo}` })
     .get(
-      `/search/issues?q=${escape('in:title')}+${escape(`repo:${owner}/${repo}`)}+${escape(
-        'type:issue'
-      )}+${escape('state:open')}+${escape(failTitle)}`
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
     )
     .reply(200, { items: issues })
     .post(`/repos/${owner}/${repo}/issues/2/comments`, {
