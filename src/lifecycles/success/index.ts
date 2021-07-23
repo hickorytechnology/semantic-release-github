@@ -1,5 +1,5 @@
 import { components } from '@octokit/openapi-types';
-import { RestEndpointMethodTypes } from '@octokit/rest';
+import { Octokit, RestEndpointMethodTypes } from '@octokit/rest';
 import AggregateError from 'aggregate-error';
 import { $log } from '@tsed/logger';
 import issueParser from 'issue-parser';
@@ -15,6 +15,7 @@ import { resolveConfig } from '../../utils/resolve-config';
 import { getReleaseLinks } from './get-release-links';
 import { getSearchQueries } from './get-search-queries';
 import { getSuccessComment } from './get-success-comment';
+import { LifecycleHandler } from '../lifecycle-handler';
 
 interface SuccessContext {
   options: { repositoryUrl: string };
@@ -27,61 +28,89 @@ interface SuccessContext {
   };
 }
 
-export async function successGitHub(pluginOptions: PluginOptions, context: Context | any): Promise<any> {
-  const {
-    options: { repositoryUrl },
-    commits,
-    nextRelease,
-    releases,
-  }: SuccessContext = context;
-  const {
-    githubToken,
-    githubUrl,
-    githubApiPathPrefix,
-    proxy,
-    successComment,
-    failComment,
-    releasedLabels,
-    addReleases,
-  } = resolveConfig(pluginOptions, context);
+export class SuccessHandler implements LifecycleHandler<Context | any, any> {
+  private context!: Context | any;
 
-  if (!successComment.enabled) {
-    $log.info('Skip commenting on issues and pull requests.');
-    return;
+  private resolvedOptions!: PluginOptions;
+
+  /**
+   * List of the errors that may occur when executing the success lifecycle method.
+   */
+  private errors: any[] = [];
+
+  public async handle(pluginOptions: PluginOptions, context: Context | any): Promise<any> {
+    this.context = context;
+    this.resolvedOptions = resolveConfig(pluginOptions, context);
+    const {
+      options: { repositoryUrl },
+      commits,
+      nextRelease,
+      releases,
+    }: SuccessContext = context;
+
+    const { githubToken, githubUrl, githubApiPathPrefix, proxy, successComment, failComment, addReleases } =
+      this.resolvedOptions;
+
+    const github = getClient(githubToken, githubUrl, githubApiPathPrefix, proxy);
+
+    // In case the repo changed name, get the new `repo`/`owner` as the search API will not follow redirects
+    const parsedUrl = parseGitHubUrl(repositoryUrl);
+    if (parsedUrl.owner === undefined || parsedUrl.repo === undefined) {
+      return;
+    }
+
+    const [owner, repo] = (
+      await github.repos.get({
+        owner: parsedUrl.owner,
+        repo: parsedUrl.repo,
+      })
+    ).data.full_name.split('/');
+
+    if (!successComment.enabled) {
+      $log.info('Skip commenting on issues and pull requests.');
+    } else {
+      await this.addSuccessCommentsAndReleaseLabels(github, owner, repo, releases, commits);
+    }
+
+    if (failComment.enabled === false) {
+      $log.info('Skip closing issue.');
+    } else {
+      await this.closeIssues(github, owner, repo);
+    }
+
+    if (addReleases !== false && this.errors.length === 0) {
+      await this.addReleases(github, owner, repo, addReleases, releases, nextRelease);
+    }
+
+    if (this.errors.length > 0) {
+      throw new AggregateError(this.errors);
+    }
   }
 
-  const errors: any[] = [];
+  private async addSuccessCommentsAndReleaseLabels(
+    github: Octokit,
+    owner: string,
+    repo: string,
+    releases: Release[],
+    commits: Commit[]
+  ): Promise<void> {
+    const { githubUrl, successComment, releasedLabels } = this.resolvedOptions;
 
-  const github = getClient(githubToken, githubUrl, githubApiPathPrefix, proxy);
+    const parser = issueParser('github', githubUrl ? { hosts: [githubUrl] } : {});
+    const releaseInfos = releases.filter((release) => Boolean(release.name));
+    const shas = commits.map(({ hash }) => hash);
 
-  // In case the repo changed name, get the new `repo`/`owner` as the search API will not follow redirects
-  const parsedUrl = parseGitHubUrl(repositoryUrl);
-  if (parsedUrl.owner === undefined || parsedUrl.repo === undefined) {
-    return;
-  }
+    const searchQueries = getSearchQueries(`repo:${owner}/${repo}+type:pr+is:merged`, shas).map(async (query) => {
+      const x = await github.search.issuesAndPullRequests({ q: query });
+      return x.data.items;
+    });
 
-  const [owner, repo] = (
-    await github.repos.get({
-      owner: parsedUrl.owner,
-      repo: parsedUrl.repo,
-    })
-  ).data.full_name.split('/');
+    const dedupedQueries = uniqBy(flatten(await Promise.all(searchQueries)), (q) => q.number);
 
-  const parser = issueParser('github', githubUrl ? { hosts: [githubUrl] } : {});
-  const releaseInfos = releases.filter((release) => Boolean(release.name));
-  const shas = commits.map(({ hash }) => hash);
-
-  const searchQueries = getSearchQueries(`repo:${owner}/${repo}+type:pr+is:merged`, shas).map(async (query) => {
-    const x = await github.search.issuesAndPullRequests({ q: query });
-    return x.data.items;
-  });
-
-  const dedupedQueries = uniqBy(flatten(await Promise.all(searchQueries)), (q) => q.number);
-
-  const filterer = async (query: components['schemas']['issue-search-result-item']) => {
-    const list = await github.pulls.listCommits({ owner, repo, pull_number: query.number });
-    const found = list.data.find(async ({ sha }) => {
-      if (shas.includes(sha)) {
+    const filterer = async (query: components['schemas']['issue-search-result-item']) => {
+      const list = await github.pulls.listCommits({ owner, repo, pull_number: query.number });
+      const includedInSHAs = list.data.find(({ sha }) => shas.includes(sha));
+      if (includedInSHAs !== undefined) {
         return true;
       }
 
@@ -91,93 +120,91 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
       }
 
       return shas.includes(foundPR.data.merge_commit_sha);
-    });
-    return found != null;
-  };
+    };
 
-  const prs = await pFilter(dedupedQueries, filterer);
+    const prs = await pFilter(dedupedQueries, filterer);
 
-  $log.debug(
-    'found pull requests: %O',
-    prs.map((pr) => pr.number)
-  );
+    $log.debug(
+      'found pull requests: %O',
+      prs.map((pr) => pr.number)
+    );
 
-  // Parse the release commits message and PRs body to find resolved issues/PRs via comment keywords
-  const issuesAndPrs = [...prs.map((pr) => pr.body), ...commits.map((commit) => commit.message)];
-  const issueNumbers = issuesAndPrs.reduce((issues: any[], message: string | undefined) => {
-    if (message) {
-      const parsed: {
-        actions: Record<string, any>;
-        refs: any[];
-        mentions: any[];
-      } = parser(message);
+    // Parse the release commits message and PRs body to find resolved issues/PRs via comment keywords
+    const issuesAndPrs = [...prs.map((pr) => pr.body), ...commits.map((commit) => commit.message)];
+    const issueNumbers = issuesAndPrs.reduce((issues: any[], message: string | undefined) => {
+      if (message) {
+        const parsed: {
+          actions: Record<string, any>;
+          refs: any[];
+          mentions: any[];
+        } = parser(message);
 
-      const ids: { number: number }[] = parsed.actions.close
-        .filter((action: { slug: string }) => action.slug == null || action.slug === `${owner}/${repo}`)
-        .map((action: { issue: string }) => ({ number: Number.parseInt(action.issue, 10) }));
+        const ids: { number: number }[] = parsed.actions.close
+          .filter((action: { slug: string }) => action.slug == null || action.slug === `${owner}/${repo}`)
+          .map((action: { issue: string }) => ({ number: Number.parseInt(action.issue, 10) }));
 
-      return issues.concat(ids);
-    }
-
-    return issues;
-  }, []);
-
-  $log.debug('found issues via comments: %O', issuesAndPrs);
-
-  // add success comments and assign release labels
-  await Promise.all(
-    uniqBy([...prs, ...issueNumbers], (q) => q.number).map(async (issue) => {
-      if (issue.number == null) {
-        return;
+        return issues.concat(ids);
       }
 
-      const body = successComment.comment
-        ? template(successComment.comment)({ ...context, issue })
-        : getSuccessComment(issue, releaseInfos, nextRelease);
-      try {
-        const comment: RestEndpointMethodTypes['issues']['createComment']['parameters'] = {
-          owner,
-          repo,
-          issue_number: issue.number,
-          body,
-        };
+      return issues;
+    }, []);
 
-        $log.debug('create comment: %O', comment);
+    $log.debug('found issues via comments: %O', issuesAndPrs);
 
-        const {
-          data: { html_url: url },
-        } = await github.issues.createComment(comment);
-        $log.info('Added comment to issue #%d: %s', issue.number, url);
+    // add success comments and assign release labels
+    await Promise.all(
+      uniqBy([...prs, ...issueNumbers], (q) => q.number).map(async (issue) => {
+        if (issue.number == null) {
+          return;
+        }
 
-        if (releasedLabels.enabled && releasedLabels.labels.length > 0) {
-          const labels = releasedLabels.labels.map((label) => template(label)(context));
-          // Don’t use .issues.addLabels for GHE < 2.16 support
-          // https://github.com/semantic-release/github/issues/138
-          await github.request('POST /repos/:owner/:repo/issues/:number/labels', {
+        const body = successComment.comment
+          ? template(successComment.comment)({ ...this.context, issue })
+          : getSuccessComment(issue, releaseInfos, this.context.nextRelease);
+        try {
+          const comment: RestEndpointMethodTypes['issues']['createComment']['parameters'] = {
             owner,
             repo,
-            number: issue.number,
-            data: labels,
-          });
-          $log.info('Added labels %O to issue #%d', labels, issue.number);
-        }
-      } catch (error) {
-        if (error.status === 403) {
-          $log.error('Not allowed to add a comment to the issue #%d.', issue.number);
-        } else if (error.status === 404) {
-          $log.error("Failed to add a comment to the issue #%d as it doesn't exist.", issue.number);
-        } else {
-          errors.push(error);
-          $log.error('Failed to add a comment to the issue #%d.', issue.number);
-          // Don't throw right away and continue to update other issues
-        }
-      }
-    })
-  );
+            issue_number: issue.number,
+            body,
+          };
 
-  if (failComment.enabled === false) {
-    $log.info('Skip closing issue.');
-  } else {
+          $log.debug('create comment: %O', comment);
+
+          const {
+            data: { html_url: url },
+          } = await github.issues.createComment(comment);
+          $log.info('Added comment to issue #%d: %s', issue.number, url);
+
+          if (releasedLabels.enabled && releasedLabels.labels.length > 0) {
+            const labels = releasedLabels.labels.map((label) => template(label)(this.context));
+            // Don’t use .issues.addLabels for GHE < 2.16 support
+            // https://github.com/semantic-release/github/issues/138
+            await github.request('POST /repos/:owner/:repo/issues/:number/labels', {
+              owner,
+              repo,
+              number: issue.number,
+              data: labels,
+            });
+            $log.info('Added labels %O to issue #%d', labels, issue.number);
+          }
+        } catch (error) {
+          if (error.status === 403) {
+            $log.error('Not allowed to add a comment to the issue #%d.', issue.number);
+          } else if (error.status === 404) {
+            $log.error("Failed to add a comment to the issue #%d as it doesn't exist.", issue.number);
+          } else {
+            this.errors.push(error);
+            $log.error('Failed to add a comment to the issue #%d.', issue.number);
+            // Don't throw right away and continue to update other issues
+          }
+        }
+      })
+    );
+  }
+
+  private async closeIssues(github: Octokit, owner: string, repo: string): Promise<void> {
+    const { failComment } = this.resolvedOptions;
     const srIssues = await findSRIssues(github, failComment.failTitle, owner, repo);
 
     $log.debug('found semantic-release issues: %O', srIssues);
@@ -205,7 +232,7 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
 
           $log.info('Closed issue #%d: %s.', issue.number, url);
         } catch (error) {
-          errors.push(error);
+          this.errors.push(error);
           $log.error('Failed to close the issue #%d.', issue.number);
           // Don't throw right away and continue to close other issues
         }
@@ -213,7 +240,14 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
     );
   }
 
-  if (addReleases !== false && errors.length === 0) {
+  private async addReleases(
+    github: Octokit,
+    owner: string,
+    repo: string,
+    addReleases: false | 'bottom' | 'top',
+    releases: Release[] | any[],
+    nextRelease: NextRelease
+  ): Promise<void> {
     const ghRelease = releases.find((release) => release.name && release.name === RELEASE_NAME);
     if (ghRelease != null) {
       const ghRelaseId = ghRelease.id;
@@ -226,9 +260,5 @@ export async function successGitHub(pluginOptions: PluginOptions, context: Conte
         await github.repos.updateRelease({ owner, repo, release_id: ghRelaseId, body: newBody });
       }
     }
-  }
-
-  if (errors.length > 0) {
-    throw new AggregateError(errors);
   }
 }

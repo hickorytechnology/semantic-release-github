@@ -3,7 +3,7 @@ import { Context } from 'semantic-release';
 import { addChannelGitHub } from './lifecycles/add-channel';
 import { failGitHub } from './lifecycles/fail';
 import { publishGitHub } from './lifecycles/publish';
-import { successGitHub } from './lifecycles/success';
+import { SuccessHandler } from './lifecycles/success';
 import { verifyGitHub } from './lifecycles/verify';
 import { PluginOptions } from './types/plugin-options';
 import { loadEnv } from './utils/load-env';
@@ -73,8 +73,7 @@ async function success(pluginOptions: PluginOptions, context: Context): Promise<
     await verifyGitHub(pluginOptions, context);
     verified = true;
   }
-
-  await successGitHub(pluginOptions, context);
+  await new SuccessHandler().handle(pluginOptions, context);
 }
 
 async function fail(pluginOptions: PluginOptions, context: Context): Promise<void> {

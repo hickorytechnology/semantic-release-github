@@ -1,8 +1,8 @@
 import { $log } from '@tsed/logger';
 import { cleanAll } from 'nock';
-import { Context, GlobalConfig, LastRelease, NextRelease, Release } from 'semantic-release';
+import { Context, LastRelease, NextRelease, Release } from 'semantic-release';
 import { repeat } from 'lodash';
-import { successGitHub } from '../../../src/lifecycles/success';
+import { SuccessHandler } from '../../../src/lifecycles/success';
 import { resolveConfig } from '../../../src/utils/resolve-config';
 import { authenticate } from '../../helpers/mock-github';
 import { getReleaseLinks } from '../../../src/lifecycles/success/get-release-links';
@@ -114,7 +114,7 @@ test('Add comment and labels to PRs associated with release commits and issues s
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
@@ -211,7 +211,7 @@ test('Add comment and labels to PRs associated with release commits and issues c
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://custom-url.com/successcomment-1');
   expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released on @next'], 1);
@@ -349,7 +349,7 @@ test('Make multiple search queries if necessary', async () => {
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
@@ -437,7 +437,7 @@ test('Do not add comment and labels for unrelated PR returned by search (compare
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
@@ -490,7 +490,7 @@ test('Do not add comment and labels if no PR is associated with release commits'
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect(github.isDone()).toBe(true);
 });
@@ -551,7 +551,7 @@ test('Do not add comment and labels to PR/issues from other repo', async () => {
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 2, 'https://github.com/successcomment-2');
   expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 2);
@@ -647,7 +647,7 @@ test('Ignore missing and forbidden issues/PRs', async () => {
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
@@ -724,7 +724,7 @@ test('Add custom comment and labels', async () => {
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released on @next', 'released from master'], 1);
@@ -791,7 +791,7 @@ test('Add custom label', async () => {
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['custom label'], 1);
@@ -855,7 +855,7 @@ test('Comment on issue/PR without ading a label', async () => {
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect(github.isDone()).toBe(true);
@@ -929,7 +929,7 @@ test('Editing the release to include all release links at the bottom', async () 
     })
     .reply(200, { html_url: releaseUrl });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect(github.isDone()).toBe(true);
@@ -1008,7 +1008,7 @@ test('Editing the release to include all release links at the top', async () => 
     })
     .reply(200, { html_url: releaseUrl });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect(github.isDone()).toBe(true);
@@ -1076,7 +1076,7 @@ test('Editing the release to include all release links with no additional releas
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect(github.isDone()).toBe(true);
@@ -1144,7 +1144,7 @@ test('Editing the release to include all release links with no additional releas
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect(github.isDone()).toBe(true);
@@ -1212,7 +1212,7 @@ test('Editing the release to include all release links with no releases', async 
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect(github.isDone()).toBe(true);
@@ -1284,7 +1284,7 @@ test('Editing the release with no ID in the release', async () => {
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
   expect(github.isDone()).toBe(true);
@@ -1336,33 +1336,41 @@ test('Ignore errors when adding comments and closing issues', async () => {
   const github = authenticate(env)
     .get(`/repos/${owner}/${repo}`)
     .reply(200, { full_name: `${owner}/${repo}` })
+
     .get(
       `/search/issues?q=${encodeURIComponent(`repo:${owner}/${repo}`)}+${encodeURIComponent(
         'type:pr'
       )}+${encodeURIComponent('is:merged')}+${commits.map((commit) => commit.hash).join('+')}`
     )
     .reply(200, { items: prs })
+
     .get(`/repos/${owner}/${repo}/pulls/1/commits`)
     .reply(200, [{ sha: commits[0].hash }])
+
     .get(`/repos/${owner}/${repo}/pulls/2/commits`)
     .reply(200, [{ sha: commits[1].hash }])
+
     .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
     .reply(400, {})
+
     .post(`/repos/${owner}/${repo}/issues/2/comments`, { body: /This PR is included/ })
     .reply(200, { html_url: 'https://github.com/successcomment-2' })
+
     .get(
       `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
         `repo:${owner}/${repo}`
       )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
     )
     .reply(200, { items: issues })
+
     .patch(`/repos/${owner}/${repo}/issues/2`, { state: 'closed' })
     .times(4)
     .reply(500)
+
     .patch(`/repos/${owner}/${repo}/issues/3`, { state: 'closed' })
     .reply(200, { html_url: 'https://github.com/issues/3' });
 
-  await expect(successGitHub(pluginConfig, context)).rejects.toThrow();
+  await expect(new SuccessHandler().handle(pluginConfig, context)).rejects.toThrow();
 
   // t.is(error1.status, 400);
   // t.is(error2.status, 500);
@@ -1434,7 +1442,7 @@ test('Close open issues when a release is successful', async () => {
     .patch(`/repos/${owner}/${repo}/issues/3`, { state: 'closed' })
     .reply(200, { html_url: 'https://github.com/issues/3' });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Closed issue #%d: %s.', 2, 'https://github.com/issues/2');
   expect($log.info).toBeCalledWith('Closed issue #%d: %s.', 3, 'https://github.com/issues/3');
@@ -1469,7 +1477,7 @@ test('Skip commenting on issues/PR if "successComment.enabled" is "false"', asyn
     context
   );
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Skip commenting on issues and pull requests.');
 });
@@ -1514,7 +1522,7 @@ test('Skip closing issues if "failComment.enabled" is "false"', async () => {
     )
     .reply(200, { items: [] });
 
-  await successGitHub(pluginConfig, context);
+  await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Skip closing issue.');
   expect(github.isDone()).toBe(true);

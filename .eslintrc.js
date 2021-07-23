@@ -33,6 +33,7 @@ module.exports = {
         tsx: 'never',
       },
     ],
+    'class-methods-use-this': 'off',
     'comma-dangle': 'off',
     'function-paren-newline': 'off',
     'implicit-arrow-linebreak': 'off',
