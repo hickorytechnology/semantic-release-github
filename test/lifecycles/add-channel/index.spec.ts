@@ -5,8 +5,6 @@ import { addChannelGitHub } from '../../../src/lifecycles/add-channel';
 import { resolveConfig } from '../../../src/utils/resolve-config';
 import { authenticate } from '../../helpers/mock-github';
 
-/* eslint camelcase: ["error", {properties: "never"}] */
-
 jest.mock('@tsed/logger');
 
 afterEach(() => {
@@ -52,9 +50,7 @@ test('Update a maintenance release', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
-  const nextRelease = { gitTag: 'v1.0.0', channel: '1.x', notes: 'Test release note body' } as
-    | NextRelease
-    | any; // TODO why is `channel` not available
+  const nextRelease = { gitTag: 'v1.0.0', channel: '1.x', notes: 'Test release note body' } as NextRelease | any; // TODO why is `channel` not available
   const options = { repositoryUrl: `https://github.com/${owner}/${repo}.git` };
   const releaseUrl = `https://github.com/${owner}/${repo}/releases/${nextRelease.version}`;
   const releaseId = 1;
@@ -139,6 +135,7 @@ test('Update a release with a custom github url', async () => {
   const github = authenticate(env)
     .get(`/repos/${owner}/${repo}/releases/tags/${nextRelease.gitTag}`)
     .reply(200, { id: releaseId })
+
     .patch(`/repos/${owner}/${repo}/releases/${releaseId}`, {
       tag_name: nextRelease.gitTag,
       prerelease: false,
@@ -195,7 +192,7 @@ test.skip('Update a release, retrying 4 times', async () => {
   expect(github.isDone()).toBe(true);
 });
 
-test.skip('Create the new release if current one is missing', async () => {
+test('Create the new release if current one is missing', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
@@ -213,9 +210,10 @@ test.skip('Create the new release if current one is missing', async () => {
   const pluginConfig = resolveConfig({}, context);
 
   const github = authenticate(env)
+    .persist()
     .get(`/repos/${owner}/${repo}/releases/tags/${nextRelease.gitTag}`)
-    .times(4)
     .reply(404)
+
     .post(`/repos/${owner}/${repo}/releases`, {
       tag_name: nextRelease.gitTag,
       body: nextRelease.notes,
@@ -231,7 +229,7 @@ test.skip('Create the new release if current one is missing', async () => {
   expect(github.isDone()).toBe(true);
 });
 
-test.skip('Throw error if cannot read current release', async () => {
+test('Throw error if cannot read current release', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
@@ -249,16 +247,16 @@ test.skip('Throw error if cannot read current release', async () => {
 
   const github = authenticate(env)
     .get(`/repos/${owner}/${repo}/releases/tags/${nextRelease.gitTag}`)
-    .times(4)
+    // .times(4)
     .reply(500);
 
-  await expect(addChannelGitHub(pluginConfig, context)).resolves.toThrow();
+  await expect(addChannelGitHub(pluginConfig, context)).rejects.toThrow();
 
   // t.is(error.status, 500); // TODO get status code from error
   expect(github.isDone()).toBe(true);
 });
 
-test.skip('Throw error if cannot create missing current release', async () => {
+test('Throw error if cannot create missing current release', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
@@ -275,24 +273,24 @@ test.skip('Throw error if cannot create missing current release', async () => {
   const pluginConfig = resolveConfig({}, context);
 
   const github = authenticate(env)
+    .persist()
     .get(`/repos/${owner}/${repo}/releases/tags/${nextRelease.gitTag}`)
-    .times(4)
     .reply(404)
+
     .post(`/repos/${owner}/${repo}/releases`, {
       tag_name: nextRelease.gitTag,
       body: nextRelease.notes,
       prerelease: false,
     })
-    .times(4)
     .reply(500);
 
-  await expect(addChannelGitHub(pluginConfig, context)).resolves.toThrow();
+  await expect(addChannelGitHub(pluginConfig, context)).rejects.toThrow();
 
   // t.is(error.status, 500); // TODO get status code from error
   expect(github.isDone()).toBe(true);
 });
 
-test.skip('Throw error if cannot update release', async () => {
+test('Throw error if cannot update release', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
@@ -312,14 +310,15 @@ test.skip('Throw error if cannot update release', async () => {
   const github = authenticate(env)
     .get(`/repos/${owner}/${repo}/releases/tags/${nextRelease.gitTag}`)
     .reply(200, { id: releaseId })
+
     .patch(`/repos/${owner}/${repo}/releases/${releaseId}`, {
       tag_name: nextRelease.gitTag,
       prerelease: false,
     })
-    .times(4)
+    // .times(4)
     .reply(404);
 
-  await expect(addChannelGitHub(pluginConfig, context)).resolves.toThrow();
+  await expect(addChannelGitHub(pluginConfig, context)).rejects.toThrow();
 
   // t.is(error.status, 404); // TODO get status code from error
   expect(github.isDone()).toBe(true);

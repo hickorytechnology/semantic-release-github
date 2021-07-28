@@ -319,6 +319,7 @@ test('Publish a release with one asset and custom github url', async () => {
       prerelease: false,
     })
     .reply(200, { upload_url: uploadUrl, html_url: untaggedReleaseUrl, id: releaseId })
+
     .patch(`/repos/${owner}/${repo}/releases/${releaseId}`, { draft: false })
     .reply(200, { upload_url: uploadUrl, html_url: releaseUrl });
 
@@ -377,6 +378,7 @@ test('Publish a release with an array of missing assets', async () => {
       prerelease: false,
     })
     .reply(200, { upload_url: uploadUrl, html_url: untaggedReleaseUrl, id: releaseId })
+
     .patch(`/repos/${owner}/${repo}/releases/${releaseId}`, { draft: false })
     .reply(200, { html_url: releaseUrl });
 
@@ -389,7 +391,7 @@ test('Publish a release with an array of missing assets', async () => {
   expect(github.isDone()).toBe(true);
 });
 
-test.skip('Throw error without retries for 400 error', async () => {
+test('Throw error without retries for 400 error', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
@@ -410,14 +412,16 @@ test.skip('Throw error without retries for 400 error', async () => {
     .post(`/repos/${owner}/${repo}/releases`, {
       tag_name: nextRelease.gitTag,
       target_commitish: branch,
+      // name: nextRelease.name,
       body: nextRelease.notes,
       prerelease: false,
     })
     .reply(404)
+
     .post(`/repos/${owner}/${repo}/releases`, {
       tag_name: nextRelease.gitTag,
       target_commitish: branch,
-      name: nextRelease.gitTag,
+      // name: nextRelease.gitTag,
       body: nextRelease.notes,
       prerelease: false,
     })

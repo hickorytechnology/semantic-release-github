@@ -1,4 +1,5 @@
 import { throttling } from '@octokit/plugin-throttling';
+import { retry } from '@octokit/plugin-retry';
 import { Octokit } from '@octokit/rest';
 import createHttpProxyAgent, { HttpProxyAgent, HttpProxyAgentOptions } from 'http-proxy-agent';
 import createHttpsProxyAgent, { HttpsProxyAgent, HttpsProxyAgentOptions } from 'https-proxy-agent';
@@ -23,13 +24,18 @@ export function getClient(
     }
   }
 
-  const MyOctokit = Octokit.plugin(throttling);
-  const github = new MyOctokit({
+  const MyOctokit = Octokit.plugin(throttling, retry);
+  return new MyOctokit({
     // log: console,
     auth: `token ${githubToken}`,
     baseUrl,
     request: {
       agent: proxyConfig,
+      retries: RETRY_CONF.retries,
+      timeout: RETRY_CONF.minTimeout,
+    },
+    retry: {
+      doNotRetry: [400, 401, 403],
     },
     throttle: {
       onRateLimit: (retryAfter: number, options: Record<string, any>, octokit: Octokit): boolean => {
@@ -49,6 +55,4 @@ export function getClient(
       },
     },
   });
-
-  return github;
 }

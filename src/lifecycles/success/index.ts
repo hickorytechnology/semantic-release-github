@@ -213,7 +213,7 @@ export class SuccessHandler implements LifecycleHandler<Context | any, any> {
       srIssues.map(async (issue) => {
         $log.debug('close issue: %O', issue);
         try {
-          const updatedIssue = {
+          const updatedIssue: RestEndpointMethodTypes['issues']['update']['parameters'] = {
             owner,
             repo,
             issue_number: issue.number,
@@ -224,11 +224,7 @@ export class SuccessHandler implements LifecycleHandler<Context | any, any> {
 
           const {
             data: { html_url: url },
-          } = await github.issues.update({
-            owner: updatedIssue.owner,
-            repo: updatedIssue.repo,
-            issue_number: updatedIssue.issue_number,
-          });
+          } = await github.issues.update(updatedIssue);
 
           $log.info('Closed issue #%d: %s.', issue.number, url);
         } catch (error) {

@@ -1,4 +1,3 @@
-import SemanticReleaseError from '@semantic-release/error';
 import { $log } from '@tsed/logger';
 import AggregateError from 'aggregate-error';
 import { cleanAll } from 'nock';
@@ -7,8 +6,6 @@ import { verifyGitHub } from '../../../src/lifecycles/verify';
 import { PluginOptions } from '../../../src/types/plugin-options';
 import { resolveConfig } from '../../../src/utils/resolve-config';
 import { authenticate } from '../../helpers/mock-github';
-
-/* eslint camelcase: ["error", {properties: "never"}] */
 
 // const verify = proxyquire('../lib/verify', {
 //   './get-client': proxyquire('../lib/get-client', { './definitions/rate-limit': rateLimit }),
@@ -118,10 +115,7 @@ test('Verify package, token and repository access and custom URL with prefix', a
   ).resolves.not.toThrow();
 
   expect(github.isDone()).toBe(true);
-  expect($log.debug).toBeCalledWith(
-    'Verify GitHub authentication (%s)',
-    'https://othertesturl.com:9090/prefix'
-  );
+  expect($log.debug).toBeCalledWith('Verify GitHub authentication (%s)', 'https://othertesturl.com:9090/prefix');
 });
 
 test('Verify package, token and repository access and custom URL without prefix', async () => {
@@ -196,10 +190,7 @@ test('Verify package, token and repository with environment variables', async ()
   ).resolves.not.toThrow();
 
   expect(github.isDone()).toBe(true);
-  expect($log.debug).toBeCalledWith(
-    'Verify GitHub authentication (%s)',
-    'https://othertesturl.com:443/prefix'
-  );
+  expect($log.debug).toBeCalledWith('Verify GitHub authentication (%s)', 'https://othertesturl.com:443/prefix');
 });
 
 test('Verify package, token and repository access with alternative environment variables', async () => {

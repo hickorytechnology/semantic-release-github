@@ -7,9 +7,13 @@ import { resolveConfig } from '../../../src/utils/resolve-config';
 import { authenticate } from '../../helpers/mock-github';
 import { getReleaseLinks } from '../../../src/lifecycles/success/get-release-links';
 import { ISSUE_ID } from '../../../src/definitions/constants';
+import { RETRY_CONF } from '../../helpers/rate-limit';
 
-/* eslint camelcase: ["error", {properties: "never"}] */
-
+// jest.mock('../../../src/definitions/rate-limit', () => ({
+//   get RETRY_CONF() {
+//     return RETRY_CONF;
+//   },
+// }));
 jest.mock('@tsed/logger');
 
 afterEach(() => {
@@ -596,6 +600,7 @@ test('Ignore missing and forbidden issues/PRs', async () => {
   );
 
   const github = authenticate(env)
+    .persist()
     .get(`/repos/${owner}/${repo}`)
     .reply(200, { full_name: `${owner}/${repo}` })
 
@@ -622,7 +627,6 @@ test('Ignore missing and forbidden issues/PRs', async () => {
     .reply(200, {})
 
     .post(`/repos/${owner}/${repo}/issues/2/comments`, { body: /This PR is included/ })
-    .times(3)
     .reply(404)
 
     .post(`/repos/${owner}/${repo}/issues/3/comments`, { body: /This PR is included/ })
@@ -1476,6 +1480,10 @@ test('Skip commenting on issues/PR if "successComment.enabled" is "false"', asyn
     },
     context
   );
+
+  authenticate(env)
+    .get(`/repos/${owner}/${repo}`)
+    .reply(200, { full_name: `${owner}/${repo}` });
 
   await new SuccessHandler().handle(pluginConfig, context);
 
