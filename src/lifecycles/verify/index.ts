@@ -16,8 +16,7 @@ const isStringOrStringArray = (value: unknown) =>
   isNonEmptyString(value) || (isArray(value) && value.every((string) => isNonEmptyString(string)));
 const isArrayOf = (validator: (v: unknown) => boolean) => (array: unknown) =>
   isArray(array) && array.every((value) => validator(value));
-const canBeDisabled = (validator: (v: unknown) => boolean) => (value: boolean) =>
-  value === false || validator(value);
+const canBeDisabled = (validator: (v: unknown) => boolean) => (value: boolean) => value === false || validator(value);
 
 const VALIDATORS: Record<string, any> = {
   proxy: {},

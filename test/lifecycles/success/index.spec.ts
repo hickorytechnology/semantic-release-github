@@ -7,13 +7,7 @@ import { resolveConfig } from '../../../src/utils/resolve-config';
 import { authenticate } from '../../helpers/mock-github';
 import { getReleaseLinks } from '../../../src/lifecycles/success/get-release-links';
 import { ISSUE_ID } from '../../../src/definitions/constants';
-import { RETRY_CONF } from '../../helpers/rate-limit';
 
-// jest.mock('../../../src/definitions/rate-limit', () => ({
-//   get RETRY_CONF() {
-//     return RETRY_CONF;
-//   },
-// }));
 jest.mock('@tsed/logger');
 
 afterEach(() => {
