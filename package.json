@@ -6,12 +6,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/semantic-release/github.git"
+    "url": "https://github.com/hickorytechnology/semantic-release-github.git"
   },
   "bugs": {
-    "url": "https://github.com/semantic-release/github/issues"
+    "url": "https://github.com/hickorytechnology/semantic-release-github/issues"
   },
-  "homepage": "https://github.com/semantic-release/github#readme",
+  "homepage": "https://github.com/hickorytechnology/semantic-release-github#readme",
   "keywords": [
     "git",
     "github",
