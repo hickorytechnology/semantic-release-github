@@ -66,16 +66,12 @@ export class SuccessHandler implements LifecycleHandler<Context | any, any> {
       })
     ).data.full_name.split('/');
 
-    if (!successComment.enabled) {
-      $log.info('Skip commenting on issues and pull requests.');
-    } else {
-      await this.addSuccessCommentsAndReleaseLabels(github, owner, repo, releases, commits);
-    }
+    await this.addSuccessCommentsAndReleaseLabels(github, owner, repo, releases, commits);
 
     if (failComment.enabled === false) {
       $log.info('Skip closing issue.');
     } else {
-      await this.closeIssues(github, owner, repo);
+      await this.closeFailedReleaseIssues(github, owner, repo);
     }
 
     if (addReleases !== false && this.errors.length === 0) {
@@ -95,6 +91,11 @@ export class SuccessHandler implements LifecycleHandler<Context | any, any> {
     commits: Commit[]
   ): Promise<void> {
     const { githubUrl, successComment, releasedLabels } = this.resolvedOptions;
+
+    if (!successComment.enabled && !releasedLabels.enabled) {
+      $log.info('Skip commenting and release labels on issues and pull requests.');
+      return;
+    }
 
     const parser = issueParser('github', githubUrl ? { hosts: [githubUrl] } : {});
     const releaseInfos = releases.filter((release) => Boolean(release.name));
@@ -158,25 +159,43 @@ export class SuccessHandler implements LifecycleHandler<Context | any, any> {
           return;
         }
 
-        const body = successComment.comment
-          ? template(successComment.comment)({ ...this.context, issue })
-          : getSuccessComment(issue, releaseInfos, this.context.nextRelease);
-        try {
-          const comment: RestEndpointMethodTypes['issues']['createComment']['parameters'] = {
-            owner,
-            repo,
-            issue_number: issue.number,
-            body,
-          };
+        if (!successComment.enabled) {
+          $log.info(`Skip commenting issue/pr #${issue.number}`);
+        } else {
+          const body = successComment.comment
+            ? template(successComment.comment)({ ...this.context, issue })
+            : getSuccessComment(issue, releaseInfos, this.context.nextRelease);
+          try {
+            const comment: RestEndpointMethodTypes['issues']['createComment']['parameters'] = {
+              owner,
+              repo,
+              issue_number: issue.number,
+              body,
+            };
 
-          $log.debug('create comment: %O', comment);
+            $log.debug('create comment: %O', comment);
 
-          const {
-            data: { html_url: url },
-          } = await github.issues.createComment(comment);
-          $log.info('Added comment to issue #%d: %s', issue.number, url);
+            const {
+              data: { html_url: url },
+            } = await github.issues.createComment(comment);
+            $log.info('Added comment to issue #%d: %s', issue.number, url);
+          } catch (error) {
+            if (error.status === 403) {
+              $log.error('Not allowed to add a comment to the issue #%d.', issue.number);
+            } else if (error.status === 404) {
+              $log.error("Failed to add a comment to the issue #%d as it doesn't exist.", issue.number);
+            } else {
+              this.errors.push(error);
+              $log.error('Failed to add a comment to the issue #%d.', issue.number);
+              // Don't throw right away and continue to update other issues
+            }
+          }
+        }
 
-          if (releasedLabels.enabled && releasedLabels.labels.length > 0) {
+        if (!releasedLabels.enabled) {
+          $log.info(`Skip applying release labels to issue/pr #${issue.number}`);
+        } else if (releasedLabels.enabled && releasedLabels.labels.length > 0) {
+          try {
             const labels = releasedLabels.labels.map((label) => template(label)(this.context));
             // Don’t use .issues.addLabels for GHE < 2.16 support
             // https://github.com/semantic-release/github/issues/138
@@ -187,23 +206,23 @@ export class SuccessHandler implements LifecycleHandler<Context | any, any> {
               data: labels,
             });
             $log.info('Added labels %O to issue #%d', labels, issue.number);
-          }
-        } catch (error) {
-          if (error.status === 403) {
-            $log.error('Not allowed to add a comment to the issue #%d.', issue.number);
-          } else if (error.status === 404) {
-            $log.error("Failed to add a comment to the issue #%d as it doesn't exist.", issue.number);
-          } else {
-            this.errors.push(error);
-            $log.error('Failed to add a comment to the issue #%d.', issue.number);
-            // Don't throw right away and continue to update other issues
+          } catch (error) {
+            if (error.status === 403) {
+              $log.error('Not allowed add released label to issue/pr #%d.', issue.number);
+            } else if (error.status === 404) {
+              $log.error("Failed to add a released label to the issue/pr #%d as it doesn't exist.", issue.number);
+            } else {
+              this.errors.push(error);
+              $log.error('Failed to add a released label to the issue/pr #%d.', issue.number);
+              // Don't throw right away and continue to update other issues
+            }
           }
         }
       })
     );
   }
 
-  private async closeIssues(github: Octokit, owner: string, repo: string): Promise<void> {
+  private async closeFailedReleaseIssues(github: Octokit, owner: string, repo: string): Promise<void> {
     const { failComment } = this.resolvedOptions;
     const srIssues = await findSRIssues(github, failComment.failTitle, owner, repo);
 

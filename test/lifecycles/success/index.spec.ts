@@ -617,9 +617,6 @@ test('Ignore missing and forbidden issues/PRs', async () => {
     .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
     .reply(200, { html_url: 'https://github.com/successcomment-1' })
 
-    .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released"]')
-    .reply(200, {})
-
     .post(`/repos/${owner}/${repo}/issues/2/comments`, { body: /This PR is included/ })
     .reply(404)
 
@@ -629,11 +626,20 @@ test('Ignore missing and forbidden issues/PRs', async () => {
     .post(`/repos/${owner}/${repo}/issues/4/comments`, { body: /This issue has been resolved/ })
     .reply(200, { html_url: 'https://github.com/successcomment-4' })
 
-    .post(`/repos/${owner}/${repo}/issues/4/labels`, '["released"]')
-    .reply(200, {})
-
     .post(`/repos/${owner}/${repo}/issues/5/comments`, { body: /This issue has been resolved/ })
     .reply(200, { html_url: 'https://github.com/successcomment-5' })
+
+    .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released"]')
+    .reply(200, {})
+
+    .post(`/repos/${owner}/${repo}/issues/2/labels`, '["released"]')
+    .reply(404, {})
+
+    .post(`/repos/${owner}/${repo}/issues/3/labels`, '["released"]')
+    .reply(403, {})
+
+    .post(`/repos/${owner}/${repo}/issues/4/labels`, '["released"]')
+    .reply(200, {})
 
     .post(`/repos/${owner}/${repo}/issues/5/labels`, '["released"]')
     .reply(200, {})
@@ -648,13 +654,16 @@ test('Ignore missing and forbidden issues/PRs', async () => {
   await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
-  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
-  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 4, 'https://github.com/successcomment-4');
-  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 4);
-  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 5, 'https://github.com/successcomment-5');
-  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 5);
   expect($log.error).toBeCalledWith("Failed to add a comment to the issue #%d as it doesn't exist.", 2);
   expect($log.error).toBeCalledWith('Not allowed to add a comment to the issue #%d.', 3);
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 4, 'https://github.com/successcomment-4');
+  expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 5, 'https://github.com/successcomment-5');
+
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
+  expect($log.error).toBeCalledWith("Failed to add a released label to the issue/pr #%d as it doesn't exist.", 2);
+  expect($log.error).toBeCalledWith('Not allowed add released label to issue/pr #%d.', 3);
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 4);
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 5);
   expect(github.isDone()).toBe(true);
 });
 
@@ -796,7 +805,7 @@ test('Add custom label', async () => {
   expect(github.isDone()).toBe(true);
 });
 
-test('Comment on issue/PR without ading a label', async () => {
+test('Comment on issue/PR without adding a label', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
@@ -836,16 +845,20 @@ test('Comment on issue/PR without ading a label', async () => {
   const github = authenticate(env)
     .get(`/repos/${owner}/${repo}`)
     .reply(200, { full_name: `${owner}/${repo}` })
+
     .get(
       `/search/issues?q=${encodeURIComponent(`repo:${owner}/${repo}`)}+${encodeURIComponent(
         'type:pr'
       )}+${encodeURIComponent('is:merged')}+${commits.map((commit) => commit.hash).join('+')}`
     )
     .reply(200, { items: prs })
+
     .get(`/repos/${owner}/${repo}/pulls/1/commits`)
     .reply(200, [{ sha: commits[0].hash }])
+
     .post(`/repos/${owner}/${repo}/issues/1/comments`, { body: /This PR is included/ })
     .reply(200, { html_url: 'https://github.com/successcomment-1' })
+
     .get(
       `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
         `repo:${owner}/${repo}`
@@ -856,6 +869,72 @@ test('Comment on issue/PR without ading a label', async () => {
   await new SuccessHandler().handle(pluginConfig, context);
 
   expect($log.info).toBeCalledWith('Added comment to issue #%d: %s', 1, 'https://github.com/successcomment-1');
+  expect(github.isDone()).toBe(true);
+});
+
+test('Add label on issue/PR without adding a comment', async () => {
+  const owner = 'test_user';
+  const repo = 'test_repo';
+  const env = { GITHUB_TOKEN: 'github_token' };
+  const failTitle = 'The automated release is failing 🚨';
+  const prs = [{ number: 1, pull_request: {}, state: 'closed' }];
+  const options = { repositoryUrl: `https://github.com/${owner}/${repo}.git` };
+  const lastRelease = { version: '1.0.0' } as LastRelease;
+  const commits = [{ hash: '123', message: 'Commit 1 message' }];
+  const nextRelease = { version: '2.0.0' } as NextRelease;
+  const releases = [{ name: 'GitHub release', url: 'https://github.com/release' }] as Release[];
+
+  const context: Context | any = {
+    env,
+    options,
+    branch: { name: 'master' },
+    lastRelease,
+    commits,
+    nextRelease,
+    releases,
+    logger: { log: jest.fn(), error: jest.fn() },
+  };
+
+  const pluginConfig = resolveConfig(
+    {
+      successComment: {
+        enabled: false,
+      },
+      failComment: { enabled: true, failTitle },
+      releasedLabels: {
+        enabled: true,
+      },
+    },
+    context
+  );
+
+  const github = authenticate(env)
+    .get(`/repos/${owner}/${repo}`)
+    .reply(200, { full_name: `${owner}/${repo}` })
+
+    .get(
+      `/search/issues?q=${encodeURIComponent(`repo:${owner}/${repo}`)}+${encodeURIComponent(
+        'type:pr'
+      )}+${encodeURIComponent('is:merged')}+${commits.map((commit) => commit.hash).join('+')}`
+    )
+    .reply(200, { items: prs })
+
+    .get(`/repos/${owner}/${repo}/pulls/1/commits`)
+    .reply(200, [{ sha: commits[0].hash }])
+
+    .post(`/repos/${owner}/${repo}/issues/1/labels`, '["released"]')
+    .reply(200, {})
+
+    .get(
+      `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
+        `repo:${owner}/${repo}`
+      )}+${encodeURIComponent('type:issue')}+${encodeURIComponent('state:open')}+${encodeURIComponent(failTitle)}`
+    )
+    .reply(200, { items: [] });
+
+  await new SuccessHandler().handle(pluginConfig, context);
+
+  expect($log.info).toBeCalledWith('Added labels %O to issue #%d', ['released'], 1);
   expect(github.isDone()).toBe(true);
 });
 
@@ -1447,7 +1526,7 @@ test('Close open issues when a release is successful', async () => {
   expect(github.isDone()).toBe(true);
 });
 
-test('Skip commenting on issues/PR if "successComment.enabled" is "false"', async () => {
+test('Skip commenting and applying relase labels on issues/PR if "successComment/releasedLabels.enabled" is "false"', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
@@ -1471,6 +1550,9 @@ test('Skip commenting on issues/PR if "successComment.enabled" is "false"', asyn
       successComment: {
         enabled: false,
       },
+      releasedLabels: {
+        enabled: false,
+      },
     },
     context
   );
@@ -1481,10 +1563,10 @@ test('Skip commenting on issues/PR if "successComment.enabled" is "false"', asyn
 
   await new SuccessHandler().handle(pluginConfig, context);
 
-  expect($log.info).toBeCalledWith('Skip commenting on issues and pull requests.');
+  expect($log.info).toBeCalledWith('Skip commenting and release labels on issues and pull requests.');
 });
 
-test('Skip closing issues if "failComment.enabled" is "false"', async () => {
+test('Skip closing release failure issues if "failComment.enabled" is "false"', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const env = { GITHUB_TOKEN: 'github_token' };
