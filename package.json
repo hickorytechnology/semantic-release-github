@@ -59,6 +59,9 @@
     "url-join": "^4.0.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^13.1.0",
+    "@commitlint/config-angular": "^13.1.0",
+    "@commitlint/config-conventional": "^13.1.0",
     "@types/debug": "^4.1.5",
     "@types/dir-glob": "^2.0.0",
     "@types/fs-extra": "^9.0.11",
