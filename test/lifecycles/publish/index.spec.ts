@@ -4,13 +4,11 @@ import { BranchSpec, Context, GlobalConfig, NextRelease } from 'semantic-release
 import tempy from 'tempy';
 import { stat } from 'fs-extra';
 import path from 'path';
-import { escape } from 'querystring';
 import { publishGitHub } from '../../../src/lifecycles/publish';
 import { PluginOptions } from '../../../src/types/plugin-options';
 import { authenticate, upload } from '../../helpers/mock-github';
 import { resolveConfig } from '../../../src/utils/resolve-config';
 
-/* eslint camelcase: ["error", {properties: "never"}] */
 const cwd = 'test/fixtures/files';
 
 jest.mock('@tsed/logger');

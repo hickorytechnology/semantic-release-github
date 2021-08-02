@@ -48,9 +48,7 @@ export class SuccessHandler implements LifecycleHandler<Context | any, any> {
       releases,
     }: SuccessContext = context;
 
-    const { githubToken, githubUrl, githubApiPathPrefix, proxy, successComment, failComment, addReleases } =
-      this.resolvedOptions;
-
+    const { githubToken, githubUrl, githubApiPathPrefix, proxy, failComment, addReleases } = this.resolvedOptions;
     const github = getClient(githubToken, githubUrl, githubApiPathPrefix, proxy);
 
     // In case the repo changed name, get the new `repo`/`owner` as the search API will not follow redirects

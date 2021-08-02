@@ -1,13 +1,9 @@
-/* eslint-disable no-param-reassign */
 import { cleanAll } from 'nock';
-import { escape } from 'querystring';
 import { ISSUE_ID } from '../../src/definitions/constants';
 import { findSRIssues } from '../../src/utils/find-sr-issues';
 import { getClient } from '../../src/utils/get-client';
 import { authenticate } from '../helpers/mock-github';
-import * as rateLimit from '../helpers/rate-limit';
 
-// jest.mock('../../src/definitions/rate-limit', () => rateLimit);
 jest.mock('@tsed/logger');
 
 const githubToken = 'github_token';
@@ -16,7 +12,6 @@ const client = getClient(githubToken, '', '', { enabled: false, options: {} });
 afterEach(() => {
   // Clear nock
   cleanAll();
-  // restore();
 });
 
 test('Filter out issues without ID', async () => {
@@ -90,7 +85,7 @@ test.skip('Retries 4 times', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const title = 'The automated release is failing :rotating_light:';
-  const github = authenticate({}, { githubToken })
+  authenticate({}, { githubToken })
     .get(
       `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
         `repo:${owner}/${repo}`
@@ -109,7 +104,7 @@ test.skip('Do not retry on 401 error', async () => {
   const owner = 'test_user';
   const repo = 'test_repo';
   const title = 'The automated release is failing :rotating_light:';
-  const github = authenticate({}, { githubToken })
+  authenticate({}, { githubToken })
     .get(
       `/search/issues?q=${encodeURIComponent('in:title')}+${encodeURIComponent(
         `repo:${owner}/${repo}`
