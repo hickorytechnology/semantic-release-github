@@ -49,7 +49,7 @@ export function getClient(
 
         return false;
       },
-      onAbuseLimit: (retryAfter: number, options: Record<string, any>, octokit: Octokit): void => {
+      onAbuseLimit: (_retryAfter: number, options: Record<string, any>, octokit: Octokit): void => {
         // does not retry, only logs a warning
         octokit.log.warn(`Abuse detected for request ${options.method} ${options.url}`);
       },

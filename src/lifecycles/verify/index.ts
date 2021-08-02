@@ -1,5 +1,4 @@
 import AggregateError from 'aggregate-error';
-import { isArray, isString } from 'lodash';
 import { Context } from 'semantic-release';
 import urlJoin from 'url-join';
 import { $log } from '@tsed/logger';
@@ -9,18 +8,18 @@ import { getError } from '../../utils/get-error';
 import { parseGitHubUrl } from '../../utils/parse-github-url';
 import { resolveConfig } from '../../utils/resolve-config';
 
-const isNonEmptyString = (value: unknown) => isString(value) && value.trim();
-const oneOf = (enumArray: any[]) => (value: unknown) => enumArray.some((element) => element === value);
-// eslint-disable-next-line max-len
-const isStringOrStringArray = (value: unknown) =>
-  isNonEmptyString(value) || (isArray(value) && value.every((string) => isNonEmptyString(string)));
-const isArrayOf = (validator: (v: unknown) => boolean) => (array: unknown) =>
-  isArray(array) && array.every((value) => validator(value));
-const canBeDisabled = (validator: (v: unknown) => boolean) => (value: boolean) => value === false || validator(value);
+// const isNonEmptyString = (value: unknown) => isString(value) && value.trim();
+// const oneOf = (enumArray: any[]) => (value: unknown) => enumArray.some((element) => element === value);
+// // eslint-disable-next-line max-len
+// const isStringOrStringArray = (value: unknown) =>
+//   isNonEmptyString(value) || (isArray(value) && value.every((string) => isNonEmptyString(string)));
+// const isArrayOf = (validator: (v: unknown) => boolean) => (array: unknown) =>
+//   isArray(array) && array.every((value) => validator(value));
+// const canBeDisabled = (validator: (v: unknown) => boolean) => (value: boolean) => value === false || validator(value);
 
-const VALIDATORS: Record<string, any> = {
-  proxy: {},
-};
+// const VALIDATORS: Record<string, any> = {
+//   proxy: {},
+// };
 
 export async function verifyGitHub(pluginOptions: PluginOptions, context: Context): Promise<void> {
   const { env, options } = context;

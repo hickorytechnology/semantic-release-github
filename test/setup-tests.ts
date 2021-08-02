@@ -1,3 +1,4 @@
+import 'setimmediate';
 import { RETRY_CONF } from './helpers/rate-limit';
 
 jest.mock('../src/definitions/rate-limit', () => ({

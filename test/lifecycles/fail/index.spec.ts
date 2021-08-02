@@ -2,20 +2,16 @@
 import SemanticReleaseError from '@semantic-release/error';
 import { $log } from '@tsed/logger';
 import { cleanAll } from 'nock';
-import { escape } from 'querystring';
 import { ISSUE_ID } from '../../../src/definitions/constants';
 import { failGitHub } from '../../../src/lifecycles/fail';
 import { PluginOptions } from '../../../src/types/plugin-options';
 import { authenticate } from '../../helpers/mock-github';
-import * as rateLimit from '../../helpers/rate-limit';
 
-// jest.mock('../../../src/definitions/rate-limit', () => rateLimit);
 jest.mock('@tsed/logger');
 
 afterEach(() => {
   // Clear nock
   cleanAll();
-  // restore();
 });
 
 test('Open a new issue with the list of errors', async () => {
