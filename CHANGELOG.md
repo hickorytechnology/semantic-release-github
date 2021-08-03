@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/hickorytechnology/semantic-release-github/compare/v1.0.2...v1.0.3) (2021-08-03)
+
+
+### Bug Fixes
+
+* build the app again during semantic-release phase ([1b08aba](https://github.com/hickorytechnology/semantic-release-github/commit/1b08aba9fd866a806906a1b1b67687ef9189246a))
+
 ## [1.0.2](https://github.com/hickorytechnology/semantic-release-github/compare/v1.0.1...v1.0.2) (2021-08-03)
 
 
