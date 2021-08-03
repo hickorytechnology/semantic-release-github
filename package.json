@@ -1,7 +1,7 @@
 {
   "name": "@hickorytechnology/semantic-release-github",
   "description": "semantic-release plugin to publish a GitHub release and comment on released Pull Requests/Issues",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Josh Sullivan (https://twitter.com/jaysche_)",
   "license": "MIT",
   "repository": {
