@@ -21,8 +21,7 @@
     [
       "@semantic-release/npm",
       {
-        "pkgRoot": "./",
-        "tarballDir": "dist"
+        "pkgRoot": "./"
       }
     ],
     "@semantic-release/git"
