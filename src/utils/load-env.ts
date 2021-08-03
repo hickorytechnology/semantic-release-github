@@ -1,7 +1,10 @@
 import { EnvType, load } from 'ts-dotenv';
 
 export const schema = {
-  NODE_ENV: String,
+  NODE_ENV: {
+    type: String,
+    optional: true,
+  },
   DEBUG: {
     type: String,
     optional: true,
