@@ -32,7 +32,7 @@
     "src"
   ],
   "main": "dist/index.js",
-  "module": "dist/tsdxlib.esm.js",
+  "module": "dist/semantic-release-github.esm.js",
   "typings": "dist/index.d.ts",
   "scripts": {
     "start": "tsdx watch",
