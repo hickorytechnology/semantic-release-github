@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/hickorytechnology/semantic-release-github/compare/v1.0.0...v1.0.1) (2021-08-03)
+
+
+### Bug Fixes
+
+* remove redundant semantic-release configuration props ([c89e42d](https://github.com/hickorytechnology/semantic-release-github/commit/c89e42d7388c2c8b00e286b2b064ce90d92fd930))
+
 # 1.0.0 (2021-08-03)
 
 
