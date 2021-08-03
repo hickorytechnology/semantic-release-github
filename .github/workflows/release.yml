@@ -38,6 +38,8 @@ jobs:
           node-version: 14
       - name: Install dependencies
         run: npm ci
+      - name: Build app
+        run: npm run build --if-present
       - name: Semantic Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
