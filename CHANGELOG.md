@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/hickorytechnology/semantic-release-github/compare/v1.0.1...v1.0.2) (2021-08-03)
+
+
+### Bug Fixes
+
+* incorrect esm dist module path ([63795ed](https://github.com/hickorytechnology/semantic-release-github/commit/63795edf7960a5e73cefe05ddca2b4fbf0664ab7))
+
 ## [1.0.1](https://github.com/hickorytechnology/semantic-release-github/compare/v1.0.0...v1.0.1) (2021-08-03)
 
 
