@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/hickorytechnology/semantic-release-github/compare/v1.0.3...v1.0.4) (2021-08-03)
+
+
+### Bug Fixes
+
+* node_env now marked as optional ([038431f](https://github.com/hickorytechnology/semantic-release-github/commit/038431f4486f3b72fa52bfeb7974818c4b157465))
+
 ## [1.0.3](https://github.com/hickorytechnology/semantic-release-github/compare/v1.0.2...v1.0.3) (2021-08-03)
 
 
